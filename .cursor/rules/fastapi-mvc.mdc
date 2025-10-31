@@ -1058,3 +1058,200 @@ tailwind.config = {
 - [ ] Ensure high contrast accessibility
 
 This design system ensures all Vibecamp POC applications maintain consistent branding, user experience, and visual identity while being easily implementable across different project types.
+
+## 🚀 Deployment - Fly.io
+
+### Deployment Strategy
+
+All FastAPI MVC projects should be deployed to Fly.io using the following consistent approach:
+
+#### Required Files for Deployment
+
+```
+project/
+├── Dockerfile          # Container configuration
+├── fly.toml           # Fly.io deployment config
+├── .dockerignore      # Files to exclude from Docker build
+└── DEPLOYMENT.md      # Deployment documentation
+```
+
+#### Dockerfile Best Practices
+
+```dockerfile
+# Use Python 3.12 slim image
+FROM python:3.12-slim
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create data directory for volumes
+RUN mkdir -p /app/data
+
+# Expose port
+EXPOSE 8000
+
+# Run application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+#### fly.toml Configuration Template
+
+```toml
+app = "your-app-name"
+primary_region = "sin"  # Choose closest region
+
+[build]
+
+[env]
+  PORT = "8000"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[http_service.checks]]
+  interval = "10s"
+  timeout = "2s"
+  grace_period = "5s"
+  method = "GET"
+  path = "/"
+
+[processes]
+  app = "uvicorn main:app --host 0.0.0.0 --port 8000"
+
+[[mounts]]
+  source = "app_db"
+  destination = "/app/data"
+
+[deploy]
+  strategy = "immediate"
+  max_unavailable = 1
+```
+
+#### Database Volume Configuration
+
+For SQLite databases, always use a Fly.io volume for persistence:
+
+1. **Create Volume:**
+   ```bash
+   fly volumes create app_db --size 1 --region sin
+   ```
+
+2. **Configure Database Path:**
+   ```python
+   # In app/database.py
+   import os
+   
+   DATABASE_DIR = os.getenv("DATABASE_DIR", "./")
+   DATABASE_FILE = os.path.join(DATABASE_DIR, "database.db")
+   DATABASE_URL = f"sqlite+aiosqlite:///{DATABASE_FILE}"
+   ```
+
+3. **Set Environment Variable:**
+   ```bash
+   fly secrets set DATABASE_DIR=/app/data
+   ```
+
+#### Deployment Workflow
+
+**Standard Deployment Process:**
+
+1. **Initial Setup (One Time):**
+   ```bash
+   # Login to Fly.io
+   fly auth login
+   
+   # Initialize app (if needed)
+   fly launch --no-deploy
+   
+   # Create volume for database
+   fly volumes create app_db --size 1 --region sin
+   
+   # Set environment variables
+   fly secrets set DATABASE_DIR=/app/data
+   ```
+
+2. **Deploy from GitHub (Recommended):**
+   - Connect GitHub repository in Fly.io dashboard
+   - Enable "Deploy on Push" for automatic deployments
+   - Every push to main branch triggers deployment
+
+3. **Manual Deployment:**
+   ```bash
+   # From local machine
+   fly deploy
+   ```
+
+#### Deployment Best Practices
+
+1. **Always use volumes for SQLite databases** - ensures data persists
+2. **Set DATABASE_DIR environment variable** - configures database location
+3. **Use .dockerignore** - excludes unnecessary files from Docker build
+4. **Test locally with Docker** before deploying:
+   ```bash
+   docker build -t myapp .
+   docker run -p 8000:8000 myapp
+   ```
+5. **Monitor deployments** using `fly logs` and `fly status`
+6. **Keep deployment documentation** in DEPLOYMENT.md for consistency
+
+#### Deployment Checklist
+
+Before deploying, ensure:
+- [ ] Dockerfile exists and is configured correctly
+- [ ] fly.toml is configured with correct app name and region
+- [ ] Volume is created for database persistence
+- [ ] DATABASE_DIR environment variable is set
+- [ ] .dockerignore excludes unnecessary files
+- [ ] Requirements.txt is up to date
+- [ ] Database path uses environment variable for flexibility
+- [ ] Health check endpoint is configured in fly.toml
+- [ ] All secrets are set using `fly secrets set`
+
+#### Post-Deployment Verification
+
+After deployment, verify:
+```bash
+# Check app status
+fly status
+
+# View logs
+fly logs
+
+# Test health endpoint
+curl https://your-app.fly.dev/
+
+# Verify database volume is mounted
+fly ssh console -C "ls -la /app/data"
+```
+
+#### Deployment Documentation
+
+Always include DEPLOYMENT.md with:
+- Prerequisites
+- Step-by-step deployment instructions
+- Volume setup instructions
+- Troubleshooting guide
+- Common commands reference
+
+This ensures consistent deployment across all Vibecamp POC projects.
