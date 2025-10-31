@@ -32,9 +32,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
-# Create directory for database files
+# Create directory for database files and backups
 # Fly.io volumes will mount here for persistent storage
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data/backups
+
+# Make backup scripts executable
+RUN chmod +x /app/app/utils/backup_db.py /app/app/utils/restore_db.py
 
 # Expose port 8000
 # This is the port FastAPI will run on

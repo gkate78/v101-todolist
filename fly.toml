@@ -42,3 +42,9 @@ primary_region = "sin"  # Singapore region (change to your preferred region)
   strategy = "immediate"
   max_unavailable = 1
 
+# Scheduled tasks (cron jobs)
+# Run database backup every Sunday at 2 AM UTC
+[[schedule]]
+  schedule = "0 2 * * 0"  # Cron format: minute hour day month weekday (Sunday = 0)
+  command = "python /app/app/utils/backup_db.py"
+
