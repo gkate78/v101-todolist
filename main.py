@@ -79,6 +79,12 @@ async def root():
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/api/todos/")
 
+# Health check endpoint for Fly.io
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring."""
+    return {"status": "ok"}
+
 
 # Run the application
 # This code only runs if you execute this file directly
