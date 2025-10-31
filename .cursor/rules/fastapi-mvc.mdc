@@ -1100,8 +1100,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create data directory for volumes
-RUN mkdir -p /app/data
+# Create data directory for volumes and backups
+RUN mkdir -p /app/data/backups
+
+# Make backup scripts executable
+RUN chmod +x /app/app/utils/backup_db.py /app/app/utils/restore_db.py
 
 # Expose port
 EXPOSE 8000
@@ -1131,10 +1134,10 @@ primary_region = "sin"  # Choose closest region
 
 [[http_service.checks]]
   interval = "10s"
-  timeout = "2s"
-  grace_period = "5s"
+  timeout = "5s"
+  grace_period = "30s"  # Give app time for database initialization
   method = "GET"
-  path = "/"
+  path = "/health"  # Use dedicated health endpoint
 
 [processes]
   app = "uvicorn main:app --host 0.0.0.0 --port 8000"
@@ -1213,7 +1216,11 @@ For SQLite databases, always use a Fly.io volume for persistence:
    docker run -p 8000:8000 myapp
    ```
 5. **Monitor deployments** using `fly logs` and `fly status`
-6. **Keep deployment documentation** in DEPLOYMENT.md for consistency
+6. **Implement automated backups** - set up weekly backups using GitHub Actions or external cron
+7. **Use health check endpoint** - create `/health` endpoint for reliable health checks
+8. **Configure adequate grace period** - set grace_period to 30s for database initialization
+9. **Keep deployment documentation** in DEPLOYMENT.md for consistency
+10. **Keep backup documentation** in BACKUP_GUIDE.md for backup procedures
 
 #### Deployment Checklist
 
@@ -1225,7 +1232,12 @@ Before deploying, ensure:
 - [ ] .dockerignore excludes unnecessary files
 - [ ] Requirements.txt is up to date
 - [ ] Database path uses environment variable for flexibility
-- [ ] Health check endpoint is configured in fly.toml
+- [ ] Health check endpoint (`/health`) is created and configured in fly.toml
+- [ ] Health check has adequate grace period (30s) for database initialization
+- [ ] Backup scripts (`backup_db.py`, `restore_db.py`) are included in `app/utils/`
+- [ ] Backup directory is created in Dockerfile (`/app/data/backups`)
+- [ ] GitHub Actions backup workflow is configured (optional but recommended)
+- [ ] BACKUP_GUIDE.md documentation is included
 - [ ] All secrets are set using `fly secrets set`
 
 #### Post-Deployment Verification
@@ -1239,11 +1251,75 @@ fly status
 fly logs
 
 # Test health endpoint
-curl https://your-app.fly.dev/
+curl https://your-app.fly.dev/health
 
 # Verify database volume is mounted
 fly ssh console -C "ls -la /app/data"
 ```
+
+#### Database Backup Strategy for SQLite Databases
+
+Always implement automated backups for SQLite database files (`.db` files). The Fly.io volume is used for persistent storage of both the database and backups:
+
+1. **Backup Scripts:**
+   - Create `app/utils/backup_db.py` - timestamped backup script for copying the database file
+   - Create `app/utils/restore_db.py` - restore script to restore from a backup database file
+   - Store backup files in the same volume as the database: `/app/data/backups/`
+   - Backup file format: `database_backup_YYYYMMDD_HHMMSS.db`
+
+2. **Backup Best Practices for Database Files:**
+   ```python
+   # app/utils/backup_db.py structure
+   - Use environment variable for database file path (DATABASE_DIR)
+   - Copy the .db file to create backups (using shutil.copy2 for metadata preservation)
+   - Create backups directory if missing
+   - Timestamp all backup files for tracking (YYYYMMDD_HHMMSS format)
+   - Auto-cleanup: Keep last 10 backup files (configurable via MAX_BACKUPS)
+   - Store backup files in same volume directory for persistence across deployments
+   ```
+
+3. **Automated Weekly Database Backups:**
+   - Use GitHub Actions workflow (`.github/workflows/backup.yml`) to trigger backup script
+   - Schedule: Weekly (e.g., Sunday 2 AM UTC)
+   - Script executes on Fly.io machine to copy the database file
+   - Requires: `FLY_API_TOKEN` secret in GitHub for Fly.io API access
+   - Alternative: External cron services (cron-job.org, EasyCron) that call Fly.io SSH
+
+4. **Database Backup Commands:**
+   ```bash
+   # Manual backup - creates a timestamped copy of database.db
+   fly ssh console --app your-app -C "python /app/app/utils/backup_db.py"
+   
+   # List available backup files
+   fly ssh console --app your-app -C "python /app/app/utils/restore_db.py"
+   
+   # Restore database from a specific backup file
+   fly ssh console --app your-app -C "python /app/app/utils/restore_db.py database_backup_YYYYMMDD_HHMMSS.db"
+   
+   # Download a backup database file to local machine
+   fly sftp get /app/data/backups/database_backup_YYYYMMDD_HHMMSS.db backup.db --app your-app
+   ```
+
+5. **Backup File Storage:**
+   - Store backup database files in same volume directory: `/app/data/backups/`
+   - Backup files persist across deployments (stored in volume-mounted directory)
+   - Automatically cleaned up (keeps last 10 backup files by default)
+   - Each backup file is timestamped for easy identification and tracking
+
+6. **Database Restore Process:**
+   - Always create a safety backup of current database file before restoring
+   - Script automatically creates `pre_restore_TIMESTAMP.db` before restoring
+   - Restore process copies backup database file over current database file
+   - Verify restore success by checking database contents
+   - Restart app after restore if needed to reload database connections
+
+7. **Backup Documentation:**
+   - Always include `BACKUP_GUIDE.md` with:
+     - Manual backup instructions
+     - Automated backup setup (GitHub Actions)
+     - Restore procedures
+     - Backup management commands
+     - Troubleshooting tips
 
 #### Deployment Documentation
 
@@ -1254,4 +1330,11 @@ Always include DEPLOYMENT.md with:
 - Troubleshooting guide
 - Common commands reference
 
-This ensures consistent deployment across all Vibecamp POC projects.
+Always include BACKUP_GUIDE.md with:
+- Backup system overview
+- Manual backup commands
+- Automated backup setup (GitHub Actions)
+- Restore procedures
+- Backup management
+
+This ensures consistent deployment and backup practices across all Vibecamp POC projects.
