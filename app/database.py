@@ -12,12 +12,17 @@ Key concepts:
 - Connection Pooling: Reuses database connections for better performance
 """
 
+import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlmodel import SQLModel
 
-# Database URL - SQLite is a file-based database stored in ./database.db
-# The 'aiosqlite' part tells SQLAlchemy to use async SQLite operations
-DATABASE_URL = "sqlite+aiosqlite:///./database.db"
+# Database URL - SQLite is a file-based database
+# In production (Fly.io), use the volume mount path /app/data
+# In development, use the local ./database.db
+# This ensures data persists across deployments in production
+DATABASE_DIR = os.getenv("DATABASE_DIR", "./")
+DATABASE_FILE = os.path.join(DATABASE_DIR, "database.db")
+DATABASE_URL = f"sqlite+aiosqlite:///{DATABASE_FILE}"
 
 # Create the database engine
 # This is like opening a connection to the database
