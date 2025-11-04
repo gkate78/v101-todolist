@@ -439,12 +439,16 @@ function debounce(func, wait) {
 ```
 
 ### Frontend Security
-- Sanitize user input before displaying
-- Use Content Security Policy (CSP) headers
-- Implement CSRF protection for forms
-- Validate data on both client and server side
-- Use HTTPS in production
-- Avoid inline JavaScript and CSS
+- **Input Sanitization**: Sanitize all user input before displaying (Jinja2 auto-escapes by default)
+- **Content Security Policy (CSP)**: Implement strict CSP headers to prevent XSS attacks
+- **CSRF Protection**: Use CSRF tokens for all state-changing form submissions
+- **Client-Side Validation**: Validate data on client side for UX, but always validate server-side
+- **HTTPS Enforcement**: Use HTTPS in production (never transmit sensitive data over HTTP)
+- **Avoid Inline Scripts**: Never use inline JavaScript or CSS (prevents XSS via CSP)
+- **Secure Cookies**: Use HttpOnly, Secure, and SameSite cookie attributes
+- **Subresource Integrity (SRI)**: Use SRI for external scripts and stylesheets
+- **XSS Prevention**: Never use `innerHTML` with user input; use `textContent` or sanitize with DOMPurify
+- **API Security**: Never expose API keys or tokens in client-side code; use environment variables or secure backend proxy
 
 ### Performance Optimization
 - Minimize HTTP requests by combining CSS/JS files
@@ -644,12 +648,430 @@ async def create_todo(db: aiosqlite.Connection, todo: TodoCreate) -> TodoRespons
 - Use parameterized queries to prevent SQL injection
 - Implement proper indexes on frequently queried columns
 
-### Security
-- Always use parameterized queries
-- Never concatenate user input into SQL strings
-- Validate and sanitize all inputs
-- Use proper authentication and authorization
-- Don't expose sensitive information in error messages
+## 🔒 Security Best Practices
+
+### Dependency Security Management
+
+#### Regular Dependency Audits
+- **Automated Scanning**: Use `pip-audit` or `safety` to regularly scan dependencies for known vulnerabilities
+- **Dependency Updates**: Regularly update dependencies to latest secure versions
+- **Version Pinning**: Pin exact versions in `requirements.txt` for production (`==`), use ranges (`>=`) only for patch updates
+- **Security Advisories**: Subscribe to security advisories for critical dependencies (FastAPI, SQLAlchemy, etc.)
+- **Vulnerability Monitoring**: Set up automated alerts for dependency vulnerabilities (GitHub Dependabot, Snyk, etc.)
+
+#### Dependency Scanning Tools
+```bash
+# Install security scanning tools
+pip install pip-audit safety
+
+# Scan for vulnerabilities
+pip-audit
+safety check
+
+# Check for outdated packages
+pip list --outdated
+
+# Update dependencies safely
+pip install --upgrade package-name
+```
+
+#### Secure Dependency Management
+```python
+# requirements.txt - Pin exact versions for production
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+sqlalchemy[asyncio]==2.0.36
+# ... other dependencies
+
+# Use requirements-dev.txt for development-only dependencies
+# pytest==7.4.3
+# pytest-asyncio==0.21.1
+# httpx==0.25.2
+```
+
+#### Third-Party Package Security
+- **Verify Sources**: Only install packages from PyPI or trusted sources
+- **Check Package Maintainers**: Verify package maintainers and community support
+- **Review Dependencies**: Check transitive dependencies for vulnerabilities
+- **Avoid Unmaintained Packages**: Prefer actively maintained packages with recent updates
+- **Use Official Packages**: Prefer official packages over third-party alternatives when available
+
+### Code-Level Security
+
+#### SQL Injection Prevention
+```python
+# ✅ CORRECT: Always use parameterized queries with ORM
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
+
+async def get_user(db: AsyncSession, user_id: int):
+    result = await db.execute(select(User).where(User.id == user_id))
+    return result.scalar_one_or_none()
+
+# ✅ CORRECT: Use parameterized queries with raw SQL
+async def get_user_raw(db: AsyncSession, user_id: int):
+    result = await db.execute(text("SELECT * FROM users WHERE id = :user_id"), {"user_id": user_id})
+    return result.fetchone()
+
+# ❌ WRONG: Never concatenate user input
+# async def get_user_unsafe(db: AsyncSession, user_id: str):
+#     result = await db.execute(f"SELECT * FROM users WHERE id = {user_id}")  # SQL INJECTION VULNERABILITY
+```
+
+#### Cross-Site Scripting (XSS) Prevention
+```python
+# ✅ CORRECT: Jinja2 auto-escapes by default, but be explicit
+from fastapi.templating import Jinja2Templates
+
+templates = Jinja2Templates(directory="app/templates")
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    # User input is automatically escaped by Jinja2
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "user_input": request.query_params.get("q", "")  # Safely escaped
+    })
+
+# ✅ CORRECT: Sanitize user input before displaying
+from markupsafe import Markup
+
+# For trusted HTML content (use with caution)
+safe_html = Markup(user_submitted_html)
+```
+
+#### Cross-Site Request Forgery (CSRF) Protection
+```python
+# ✅ CORRECT: Use CSRF tokens for state-changing operations
+from fastapi_csrf_protect import CsrfProtect
+from fastapi_csrf_protect.exceptions import CsrfProtectError
+
+@CsrfProtect.load_config
+def get_csrf_config():
+    return CsrfSettings(secret_key=os.getenv("SECRET_KEY"))
+
+@app.post("/create")
+async def create_item(request: Request, csrf_protect: CsrfProtect = Depends()):
+    await csrf_protect.validate_csrf(request)
+    # Process request...
+```
+
+#### Input Validation and Sanitization
+```python
+# ✅ CORRECT: Use Pydantic models for validation
+from pydantic import BaseModel, EmailStr, Field, validator
+from typing import Optional
+import re
+
+class UserCreate(BaseModel):
+    email: EmailStr  # Validates email format
+    username: str = Field(..., min_length=3, max_length=50, regex="^[a-zA-Z0-9_]+$")
+    password: str = Field(..., min_length=8, max_length=128)
+    phone: Optional[str] = Field(None, max_length=20)
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'\d', v):
+            raise ValueError('Password must contain at least one digit')
+        return v
+
+@app.post("/users")
+async def create_user(user: UserCreate):
+    # Input is automatically validated by Pydantic
+    return await create_user_in_db(user)
+```
+
+#### Authentication and Authorization
+```python
+# ✅ CORRECT: Use secure session management
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import secrets
+from datetime import datetime, timedelta
+
+security = HTTPBearer()
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db)
+):
+    token = credentials.credentials
+    session = await get_session_by_token(db, token)
+    
+    if not session or session.expires_at < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+    
+    return session.user
+
+async def require_admin(user: User = Depends(get_current_user)):
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return user
+
+@app.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    # Only admins can delete users
+    return await delete_user_from_db(db, user_id)
+```
+
+#### Password Security
+```python
+# ✅ CORRECT: Hash passwords with bcrypt
+import bcrypt
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt."""
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its hash."""
+    return pwd_context.verify(plain_password, hashed_password)
+
+# ✅ CORRECT: Never store plain text passwords
+# ❌ WRONG: user.password = password  # NEVER DO THIS
+# ✅ CORRECT: user.password_hash = hash_password(password)
+```
+
+#### Secure Session Management
+```python
+# ✅ CORRECT: Use secure, HttpOnly cookies with proper expiration
+from fastapi.responses import RedirectResponse
+import secrets
+from datetime import datetime, timedelta
+
+async def create_session(user_id: int, db: AsyncSession):
+    token = secrets.token_urlsafe(32)  # Generate cryptographically secure token
+    expires_at = datetime.utcnow() + timedelta(days=1)
+    
+    session = Session(token=token, user_id=user_id, expires_at=expires_at)
+    db.add(session)
+    await db.commit()
+    
+    return session
+
+@app.post("/login")
+async def login(response: Response, db: AsyncSession = Depends(get_db)):
+    # ... authenticate user ...
+    session = await create_session(user.id, db)
+    
+    # Set secure cookie
+    response.set_cookie(
+        key="session_token",
+        value=session.token,
+        httponly=True,  # Prevents JavaScript access
+        secure=True,     # HTTPS only in production
+        samesite="lax", # CSRF protection
+        max_age=86400   # 24 hours
+    )
+    return response
+```
+
+#### API Security
+```python
+# ✅ CORRECT: Rate limiting to prevent abuse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.post("/api/endpoint")
+@limiter.limit("10/minute")  # Limit to 10 requests per minute
+async def protected_endpoint(request: Request):
+    # Process request...
+```
+
+#### File Upload Security
+```python
+# ✅ CORRECT: Validate file uploads
+from fastapi import UploadFile, File
+import magic
+from pathlib import Path
+
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    # Check file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="File type not allowed")
+    
+    # Check file size
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large")
+    
+    # Verify file type using magic bytes (not just extension)
+    file_type = magic.from_buffer(contents, mime=True)
+    if not file_type.startswith(("image/", "application/pdf")):
+        raise HTTPException(status_code=400, detail="Invalid file type")
+    
+    # Save file securely (outside web root, with random filename)
+    secure_filename = secrets.token_urlsafe(16) + file_ext
+    file_path = Path("uploads") / secure_filename
+    file_path.write_bytes(contents)
+    
+    return {"filename": secure_filename}
+```
+
+#### Secrets Management
+```python
+# ✅ CORRECT: Use environment variables for secrets
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Never hardcode secrets in code
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable not set")
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+API_KEY = os.getenv("API_KEY")
+
+# ✅ CORRECT: Use secrets for cryptographic operations
+import secrets
+
+# Generate secure random tokens
+token = secrets.token_urlsafe(32)
+session_id = secrets.token_hex(16)
+
+# ❌ WRONG: Never use predictable or weak secrets
+# token = "my-secret-token"  # NEVER DO THIS
+# token = "12345"  # NEVER DO THIS
+```
+
+#### Error Handling Without Information Disclosure
+```python
+# ✅ CORRECT: Generic error messages for users, detailed logs for developers
+import logging
+
+logger = logging.getLogger(__name__)
+
+@app.post("/users")
+async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
+    try:
+        return await create_user_in_db(db, user)
+    except ValueError as e:
+        # Log detailed error for debugging
+        logger.error(f"Validation error creating user: {str(e)}", exc_info=True)
+        # Return generic message to user
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid user data provided"
+        )
+    except Exception as e:
+        # Log full error details
+        logger.error(f"Unexpected error creating user: {str(e)}", exc_info=True)
+        # Return generic message to user
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred processing your request"
+        )
+```
+
+#### Security Headers
+```python
+# ✅ CORRECT: Add security headers middleware
+from fastapi.middleware.security import SecurityHeadersMiddleware
+
+app.add_middleware(
+    SecurityHeadersMiddleware,
+    max_age=31536000,  # 1 year
+    force_https=True,
+    strict_transport_security=True,
+    content_security_policy="default-src 'self'",
+    x_content_type_options="nosniff",
+    x_frame_options="DENY",
+    x_xss_protection="1; mode=block"
+)
+
+# Custom security headers
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    return response
+```
+
+#### CORS Configuration
+```python
+# ✅ CORRECT: Restrict CORS to specific origins
+from fastapi.middleware.cors import CORSMiddleware
+
+# Production: Specific origins only
+ALLOWED_ORIGINS = [
+    "https://yourdomain.com",
+    "https://www.yourdomain.com",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,  # Never use ["*"] in production
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+    max_age=3600,
+)
+
+# ❌ WRONG: Never allow all origins in production
+# allow_origins=["*"]  # SECURITY RISK
+```
+
+### Security Checklist
+
+#### Pre-Deployment Security Audit
+- [ ] All dependencies are up-to-date and vulnerability-free
+- [ ] All user inputs are validated using Pydantic models
+- [ ] SQL queries use parameterized queries or ORM (no string concatenation)
+- [ ] Passwords are hashed using bcrypt or similar
+- [ ] Session tokens are cryptographically secure and HttpOnly
+- [ ] CSRF protection is enabled for state-changing operations
+- [ ] File uploads are validated (type, size, content)
+- [ ] Error messages don't expose sensitive information
+- [ ] Security headers are configured (CSP, HSTS, etc.)
+- [ ] CORS is restricted to specific origins (not "*")
+- [ ] Rate limiting is implemented for API endpoints
+- [ ] Secrets are stored in environment variables (not in code)
+- [ ] HTTPS is enforced in production
+- [ ] Database credentials are secured
+- [ ] Logging doesn't expose sensitive data (passwords, tokens, etc.)
+
+#### Regular Security Maintenance
+- [ ] Weekly dependency vulnerability scans
+- [ ] Monthly dependency updates
+- [ ] Quarterly security audit
+- [ ] Regular penetration testing
+- [ ] Security headers validation
+- [ ] Session management review
+- [ ] Access control verification
 
 ## Development Guidelines
 
@@ -688,6 +1110,13 @@ aiosqlite==0.19.0  # or asyncpg, aiomysql for production
 pytest==7.4.3
 pytest-asyncio==0.21.1
 httpx==0.25.2  # for testing
+```
+
+### Security Tools (Recommended)
+```
+pip-audit>=2.6.0  # Dependency vulnerability scanning
+safety>=2.3.0     # Alternative vulnerability scanner
+bandit>=1.7.5     # Security linting for Python code
 ```
 
 ## 🚀 Advanced Architecture & Scalability
@@ -732,6 +1161,300 @@ httpx==0.25.2  # for testing
 1. Follow microservices principles for building scalable and maintainable services
 2. Optimize FastAPI applications for serverless and cloud-native deployments
 3. Apply advanced security, monitoring, and optimization techniques to ensure robust, performant APIs
+
+## 🚀 Fly.io Deployment & Volume Persistence
+
+### Volume Configuration for Data Persistence
+
+#### Critical: Always Use Volumes for Persistent Data
+When deploying to Fly.io, **ALWAYS** configure volumes to persist:
+- **Database files** (`.db` files - SQLite databases)
+- **Log files** (application logs, error logs)
+- **Uploaded files** (user uploads, media files)
+- **Session data** (if stored on disk)
+- **Any other persistent data** that must survive deployments and restarts
+
+**Without volumes, all data will be lost on deployment or machine restart!**
+
+#### Fly.toml Volume Configuration
+```toml
+# fly.toml
+
+[app]
+app = "your-app-name"
+primary_region = "lax"
+
+[[mounts]]
+source = "your_app_data"
+destination = "/data"
+```
+
+#### Database Configuration for Fly.io
+```python
+# app/database.py
+import os
+from pathlib import Path
+
+# SQLite database path - use volume on Fly.io, local file for development
+# On Fly.io, volumes are mounted at /data
+# Check if we're on Fly.io by checking if /data exists or DATABASE_URL env var
+
+# Determine database path
+if os.path.exists("/data"):
+    # Production on Fly.io - use volume
+    DB_PATH = Path("/data/vibecamp.db")
+else:
+    # Development - use local file
+    DB_PATH = Path("./vibecamp.db")
+
+# Ensure directory exists
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+```
+
+#### Log File Configuration for Fly.io
+```python
+# app/logging_config.py
+import os
+import logging
+from pathlib import Path
+
+# Determine log directory
+if os.path.exists("/data"):
+    # Production on Fly.io - use volume
+    LOG_DIR = Path("/data/logs")
+else:
+    # Development - use local logs directory
+    LOG_DIR = Path("./logs")
+
+# Ensure directory exists
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_DIR / "app.log"),
+        logging.FileHandler(LOG_DIR / "error.log", level=logging.ERROR),
+        logging.StreamHandler()  # Also log to stdout for Fly.io logs
+    ]
+)
+```
+
+#### Creating and Attaching Volumes
+
+##### Initial Volume Creation
+```bash
+# Create a volume for your app
+fly volumes create your_app_data --size 10 --region lax
+
+# Verify volume was created
+fly volumes list
+```
+
+##### Attaching Volume to Machine
+```bash
+# If volume is not automatically attached, attach it manually
+fly machine update <machine-id> --volume your_app_data:/data
+```
+
+##### Volume Management Commands
+```bash
+# List all volumes
+fly volumes list
+
+# Inspect a specific volume
+fly volumes show your_app_data
+
+# Extend volume size (if needed)
+fly volumes extend your_app_data --size 20
+
+# Create snapshot (backup)
+fly volumes snapshot your_app_data
+```
+
+#### Complete Fly.toml Example with Volume
+```toml
+app = "your-app-name"
+primary_region = "lax"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8000"
+  DATABASE_URL = "sqlite+aiosqlite:///data/vibecamp.db"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+# CRITICAL: Mount volume for persistent data
+[[mounts]]
+  source = "your_app_data"
+  destination = "/data"
+```
+
+#### Volume Best Practices
+
+##### Volume Size Planning
+- **Small apps**: Start with 10GB
+- **Medium apps**: 20-50GB
+- **Large apps**: 100GB+ as needed
+- **Monitor usage**: Check volume usage regularly
+- **Extend when needed**: Use `fly volumes extend` to increase size
+
+##### Volume Path Structure
+```
+/data/
+├── vibecamp.db          # SQLite database
+├── logs/                # Application logs
+│   ├── app.log
+│   ├── error.log
+│   └── access.log
+├── uploads/             # User uploaded files
+│   ├── images/
+│   └── documents/
+└── backups/             # Database backups
+    └── backup_*.db
+```
+
+##### Database Path Configuration
+```python
+# ✅ CORRECT: Use volume path in production
+if os.path.exists("/data"):
+    DATABASE_URL = "sqlite+aiosqlite:///data/vibecamp.db"
+else:
+    DATABASE_URL = "sqlite+aiosqlite:///./vibecamp.db"
+```
+
+##### Pre-Deployment Checklist
+- [ ] Volume created and attached (`fly volumes list`)
+- [ ] Database path configured to use `/data/` directory
+- [ ] Log directory configured to use `/data/logs/`
+- [ ] Upload directory configured to use `/data/uploads/`
+- [ ] Volume size sufficient for expected data growth
+- [ ] Backup strategy in place for volume data
+- [ ] Volume persistence verified after deployment
+
+#### Backup Strategy for Volumes
+
+##### Automated Database Backups
+```python
+# scripts/backup_db.py
+# Use the backup script to download database from volume
+# This script connects to Fly.io and downloads /data/vibecamp.db
+```
+
+##### Volume Snapshots
+```bash
+# Create a snapshot of the entire volume
+fly volumes snapshot your_app_data
+
+# List snapshots
+fly volumes snapshots list your_app_data
+```
+
+##### Manual Backup Commands
+```bash
+# SSH into machine and backup database
+fly ssh console -a your-app-name
+# Inside the machine:
+cp /data/vibecamp.db /data/backups/backup_$(date +%Y%m%d_%H%M%S).db
+
+# Or download directly using flyctl
+fly ssh sftp shell -a your-app-name
+# Then use SFTP to download files
+```
+
+#### Common Volume Issues and Solutions
+
+##### Issue: Volume Not Attached
+```bash
+# Check if volume exists
+fly volumes list
+
+# Attach volume to machine
+fly machine update <machine-id> --volume your_app_data:/data
+```
+
+##### Issue: Permission Denied
+```python
+# Ensure directories are created with proper permissions
+from pathlib import Path
+
+data_dir = Path("/data")
+data_dir.mkdir(parents=True, exist_ok=True)
+data_dir.chmod(0o755)  # Read/write/execute for owner, read/execute for others
+```
+
+##### Issue: Database Not Persisting
+- Verify volume is mounted: `fly ssh console -a your-app-name -C "ls -la /data"`
+- Check database path matches volume mount point
+- Ensure database file is written to `/data/` not root directory
+
+#### Migration Guide: Adding Volume to Existing App
+
+1. **Create Volume**
+   ```bash
+   fly volumes create your_app_data --size 10 --region lax
+   ```
+
+2. **Update fly.toml**
+   ```toml
+   [[mounts]]
+     source = "your_app_data"
+     destination = "/data"
+   ```
+
+3. **Update Code to Use `/data/`**
+   ```python
+   # Update database path
+   DATABASE_URL = "sqlite+aiosqlite:///data/vibecamp.db"
+   ```
+
+4. **Migrate Existing Data**
+   ```bash
+   # SSH into machine
+   fly ssh console -a your-app-name
+   
+   # Copy existing database to volume
+   cp vibecamp.db /data/vibecamp.db
+   ```
+
+5. **Deploy**
+   ```bash
+   fly deploy
+   ```
+
+6. **Verify Persistence**
+   ```bash
+   # Restart machine and verify data persists
+   fly machine restart <machine-id>
+   fly ssh console -a your-app-name -C "ls -la /data"
+   ```
+
+#### Production Deployment Checklist
+- [ ] Volume created with appropriate size
+- [ ] Volume attached to machine(s)
+- [ ] Database path configured to `/data/` directory
+- [ ] Log directory configured to `/data/logs/`
+- [ ] Upload directory configured to `/data/uploads/`
+- [ ] Backup strategy implemented
+- [ ] Volume persistence tested (restart machine, verify data persists)
+- [ ] Monitoring volume usage
+- [ ] Documented volume management procedures
 
 This guide provides a complete foundation for building scalable, maintainable FastAPI applications following MVC architecture and industry best practices.
 
@@ -1058,283 +1781,3 @@ tailwind.config = {
 - [ ] Ensure high contrast accessibility
 
 This design system ensures all Vibecamp POC applications maintain consistent branding, user experience, and visual identity while being easily implementable across different project types.
-
-## 🚀 Deployment - Fly.io
-
-### Deployment Strategy
-
-All FastAPI MVC projects should be deployed to Fly.io using the following consistent approach:
-
-#### Required Files for Deployment
-
-```
-project/
-├── Dockerfile          # Container configuration
-├── fly.toml           # Fly.io deployment config
-├── .dockerignore      # Files to exclude from Docker build
-└── DEPLOYMENT.md      # Deployment documentation
-```
-
-#### Dockerfile Best Practices
-
-```dockerfile
-# Use Python 3.12 slim image
-FROM python:3.12-slim
-
-# Set working directory
-WORKDIR /app
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
-COPY . .
-
-# Create data directory for volumes and backups
-RUN mkdir -p /app/data/backups
-
-# Make backup scripts executable
-RUN chmod +x /app/app/utils/backup_db.py /app/app/utils/restore_db.py
-
-# Expose port
-EXPOSE 8000
-
-# Run application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-#### fly.toml Configuration Template
-
-```toml
-app = "your-app-name"
-primary_region = "sin"  # Choose closest region
-
-[build]
-
-[env]
-  PORT = "8000"
-
-[http_service]
-  internal_port = 8000
-  force_https = true
-  auto_stop_machines = true
-  auto_start_machines = true
-  min_machines_running = 0
-  processes = ["app"]
-
-[[http_service.checks]]
-  interval = "10s"
-  timeout = "5s"
-  grace_period = "30s"  # Give app time for database initialization
-  method = "GET"
-  path = "/health"  # Use dedicated health endpoint
-
-[processes]
-  app = "uvicorn main:app --host 0.0.0.0 --port 8000"
-
-[[mounts]]
-  source = "app_db"
-  destination = "/app/data"
-
-[deploy]
-  strategy = "immediate"
-  max_unavailable = 1
-```
-
-#### Database Volume Configuration
-
-For SQLite databases, always use a Fly.io volume for persistence:
-
-1. **Create Volume:**
-   ```bash
-   fly volumes create app_db --size 1 --region sin
-   ```
-
-2. **Configure Database Path:**
-   ```python
-   # In app/database.py
-   import os
-   
-   DATABASE_DIR = os.getenv("DATABASE_DIR", "./")
-   DATABASE_FILE = os.path.join(DATABASE_DIR, "database.db")
-   DATABASE_URL = f"sqlite+aiosqlite:///{DATABASE_FILE}"
-   ```
-
-3. **Set Environment Variable:**
-   ```bash
-   fly secrets set DATABASE_DIR=/app/data
-   ```
-
-#### Deployment Workflow
-
-**Standard Deployment Process:**
-
-1. **Initial Setup (One Time):**
-   ```bash
-   # Login to Fly.io
-   fly auth login
-   
-   # Initialize app (if needed)
-   fly launch --no-deploy
-   
-   # Create volume for database
-   fly volumes create app_db --size 1 --region sin
-   
-   # Set environment variables
-   fly secrets set DATABASE_DIR=/app/data
-   ```
-
-2. **Deploy from GitHub (Recommended):**
-   - Connect GitHub repository in Fly.io dashboard
-   - Enable "Deploy on Push" for automatic deployments
-   - Every push to main branch triggers deployment
-
-3. **Manual Deployment:**
-   ```bash
-   # From local machine
-   fly deploy
-   ```
-
-#### Deployment Best Practices
-
-1. **Always use volumes for SQLite databases** - ensures data persists
-2. **Set DATABASE_DIR environment variable** - configures database location
-3. **Use .dockerignore** - excludes unnecessary files from Docker build
-4. **Test locally with Docker** before deploying:
-   ```bash
-   docker build -t myapp .
-   docker run -p 8000:8000 myapp
-   ```
-5. **Monitor deployments** using `fly logs` and `fly status`
-6. **Implement automated backups** - set up weekly backups using GitHub Actions or external cron
-7. **Use health check endpoint** - create `/health` endpoint for reliable health checks
-8. **Configure adequate grace period** - set grace_period to 30s for database initialization
-9. **Keep deployment documentation** in DEPLOYMENT.md for consistency
-10. **Keep backup documentation** in BACKUP_GUIDE.md for backup procedures
-
-#### Deployment Checklist
-
-Before deploying, ensure:
-- [ ] Dockerfile exists and is configured correctly
-- [ ] fly.toml is configured with correct app name and region
-- [ ] Volume is created for database persistence
-- [ ] DATABASE_DIR environment variable is set
-- [ ] .dockerignore excludes unnecessary files
-- [ ] Requirements.txt is up to date
-- [ ] Database path uses environment variable for flexibility
-- [ ] Health check endpoint (`/health`) is created and configured in fly.toml
-- [ ] Health check has adequate grace period (30s) for database initialization
-- [ ] Backup scripts (`backup_db.py`, `restore_db.py`) are included in `app/utils/`
-- [ ] Backup directory is created in Dockerfile (`/app/data/backups`)
-- [ ] GitHub Actions backup workflow is configured (optional but recommended)
-- [ ] BACKUP_GUIDE.md documentation is included
-- [ ] All secrets are set using `fly secrets set`
-
-#### Post-Deployment Verification
-
-After deployment, verify:
-```bash
-# Check app status
-fly status
-
-# View logs
-fly logs
-
-# Test health endpoint
-curl https://your-app.fly.dev/health
-
-# Verify database volume is mounted
-fly ssh console -C "ls -la /app/data"
-```
-
-#### Database Backup Strategy for SQLite Databases
-
-Always implement automated backups for SQLite database files (`.db` files). The Fly.io volume is used for persistent storage of both the database and backups:
-
-1. **Backup Scripts:**
-   - Create `app/utils/backup_db.py` - timestamped backup script for copying the database file
-   - Create `app/utils/restore_db.py` - restore script to restore from a backup database file
-   - Store backup files in the same volume as the database: `/app/data/backups/`
-   - Backup file format: `database_backup_YYYYMMDD_HHMMSS.db`
-
-2. **Backup Best Practices for Database Files:**
-   ```python
-   # app/utils/backup_db.py structure
-   - Use environment variable for database file path (DATABASE_DIR)
-   - Copy the .db file to create backups (using shutil.copy2 for metadata preservation)
-   - Create backups directory if missing
-   - Timestamp all backup files for tracking (YYYYMMDD_HHMMSS format)
-   - Auto-cleanup: Keep last 10 backup files (configurable via MAX_BACKUPS)
-   - Store backup files in same volume directory for persistence across deployments
-   ```
-
-3. **Automated Weekly Database Backups:**
-   - Use GitHub Actions workflow (`.github/workflows/backup.yml`) to trigger backup script
-   - Schedule: Weekly (e.g., Sunday 2 AM UTC)
-   - Script executes on Fly.io machine to copy the database file
-   - Requires: `FLY_API_TOKEN` secret in GitHub for Fly.io API access
-   - Alternative: External cron services (cron-job.org, EasyCron) that call Fly.io SSH
-
-4. **Database Backup Commands:**
-   ```bash
-   # Manual backup - creates a timestamped copy of database.db
-   fly ssh console --app your-app -C "python /app/app/utils/backup_db.py"
-   
-   # List available backup files
-   fly ssh console --app your-app -C "python /app/app/utils/restore_db.py"
-   
-   # Restore database from a specific backup file
-   fly ssh console --app your-app -C "python /app/app/utils/restore_db.py database_backup_YYYYMMDD_HHMMSS.db"
-   
-   # Download a backup database file to local machine
-   fly sftp get /app/data/backups/database_backup_YYYYMMDD_HHMMSS.db backup.db --app your-app
-   ```
-
-5. **Backup File Storage:**
-   - Store backup database files in same volume directory: `/app/data/backups/`
-   - Backup files persist across deployments (stored in volume-mounted directory)
-   - Automatically cleaned up (keeps last 10 backup files by default)
-   - Each backup file is timestamped for easy identification and tracking
-
-6. **Database Restore Process:**
-   - Always create a safety backup of current database file before restoring
-   - Script automatically creates `pre_restore_TIMESTAMP.db` before restoring
-   - Restore process copies backup database file over current database file
-   - Verify restore success by checking database contents
-   - Restart app after restore if needed to reload database connections
-
-7. **Backup Documentation:**
-   - Always include `BACKUP_GUIDE.md` with:
-     - Manual backup instructions
-     - Automated backup setup (GitHub Actions)
-     - Restore procedures
-     - Backup management commands
-     - Troubleshooting tips
-
-#### Deployment Documentation
-
-Always include DEPLOYMENT.md with:
-- Prerequisites
-- Step-by-step deployment instructions
-- Volume setup instructions
-- Troubleshooting guide
-- Common commands reference
-
-Always include BACKUP_GUIDE.md with:
-- Backup system overview
-- Manual backup commands
-- Automated backup setup (GitHub Actions)
-- Restore procedures
-- Backup management
-
-This ensures consistent deployment and backup practices across all Vibecamp POC projects.
