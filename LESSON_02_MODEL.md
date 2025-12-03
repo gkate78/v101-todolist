@@ -25,18 +25,18 @@ By the end of this lesson, students will be able to:
 A **database** is an organized collection of data stored electronically. Think of it as a digital filing cabinet.
 
 ```
-┌─────────────────────────────────────┐
-│         DATABASE                    │
-│  ┌───────────────────────────────┐  │
-│  │         TABLE: todo           │  │
-│  ├──────┬──────────────┬───────-─┤  │
-│  │  id  │    title     │completed│  │
-│  ├──────┼──────────────┼───────-─┤  │
-│  │  1   │ Buy groceries│  false  │  │
-│  │  2   │ Finish homework│ true  │  │
-│  │  3   │ Call mom     │  false  │  │
-│  └──────┴──────────────┴──────-──┘  │
-└─────────────────────────────────────┘
+┌────────────────────────────────────────┐
+│         DATABASE                       │
+│  ┌──────────────────────────────────┐  │
+│  │         TABLE: todo              │  │
+│  ├──────┬─────────────────┬─────────┤  │
+│  │  id  │    title        │completed│  │
+│  ├──────┼─────────────────┼─────────┤  │
+│  │  1   │ Buy groceries   │  false  │  │
+│  │  2   │ Finish homework │  true   │  │
+│  │  3   │ Call mom        │  false  │  │
+│  └──────┴─────────────────┴─────────┘  │
+└────────────────────────────────────────┘
 ```
 
 ### Why Do We Need Databases?
