@@ -26,16 +26,16 @@ A **database** is an organized collection of data stored electronically. Think o
 
 ```
 ┌─────────────────────────────────────┐
-│         DATABASE                     │
-│  ┌───────────────────────────────┐   │
-│  │         TABLE: todo          │   │
-│  ├──────┬──────────────┬────────┤   │
-│  │  id  │    title     │completed│   │
-│  ├──────┼──────────────┼────────┤   │
-│  │  1   │ Buy groceries│  false │   │
-│  │  2   │ Finish homework│ true │   │
-│  │  3   │ Call mom     │  false │   │
-│  └──────┴──────────────┴────────┘   │
+│         DATABASE                    │
+│  ┌───────────────────────────────┐  │
+│  │         TABLE: todo           │  │
+│  ├──────┬──────────────┬───────-─┤  │
+│  │  id  │    title     │completed│  │
+│  ├──────┼──────────────┼───────-─┤  │
+│  │  1   │ Buy groceries│  false  │  │
+│  │  2   │ Finish homework│ true  │  │
+│  │  3   │ Call mom     │  false  │  │
+│  └──────┴──────────────┴──────-──┘  │
 └─────────────────────────────────────┘
 ```
 
@@ -209,11 +209,11 @@ class Todo            →    CREATE TABLE todo (
               ↕ ORM Mapping
 ┌─────────────────────────────────────────┐
 │         Database Table Row              │
-├──────┬──────────────┬───────────────┤
-│  id  │    title     │   completed   │
-├──────┼──────────────┼───────────────┤
-│  1   │Buy groceries │      0        │
-└──────┴──────────────┴───────────────┘
+├──────┬──────────────┬───────────────────┤
+│  id  │    title     │   completed       │
+├──────┼──────────────┼───────────────────┤
+│  1   │Buy groceries │      0            │
+└──────┴──────────────┴───────────────────┘
 ```
 
 ---
@@ -502,10 +502,10 @@ class Todo(SQLModel, table=True):
 ```
 Category Table          Todo Table
 ┌────┬──────────┐      ┌────┬──────────┬─────────────┐
-│ id │   name  │      │ id │   title  │ category_id │
+│ id │   name   │      │ id │   title  │ category_id │
 ├────┼──────────┤      ├────┼──────────┼─────────────┤
-│ 1  │ Personal│◄─────┤ 1  │ Buy milk │      1       │
-│ 2  │ Work    │      │ 2  │ Meeting  │      2       │
+│ 1  │ Personal │◄─────┤ 1  │ Buy milk │      1      │
+│ 2  │ Work     │      │ 2  │ Meeting  │      2      │
 └────┴──────────┘      └────┴──────────┴─────────────┘
 ```
 
