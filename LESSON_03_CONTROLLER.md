@@ -55,7 +55,7 @@ By the end of this lesson, students will be able to:
 │  └──────┬───────┘                       │
 │         │                               │
 │  ┌──────▼───────┐                       │
-│  │ Controllers  │  ← Business logic    │
+│  │ Controllers  │  ← Business logic     │
 │  └──────┬───────┘                       │
 │         │                               │
 │  ┌──────▼───────┐                       │
@@ -467,20 +467,20 @@ FastAPI automatically generates interactive API documentation!
 
 ```
 ┌─────────────────────────────────────────┐
-│  Todo List API - Swagger UI            │
+│  Todo List API - Swagger UI             │
 ├─────────────────────────────────────────┤
 │                                         │
-│  POST /api/todos/                      │
-│  Create a new todo                     │
-│  [Try it out]                          │
+│  POST /api/todos/                       │
+│  Create a new todo                      │
+│  [Try it out]                           │
 │                                         │
-│  GET /api/todos/list                   │
-│  Get all todos                         │
-│  [Try it out]                          │
+│  GET /api/todos/list                    │
+│  Get all todos                          │
+│  [Try it out]                           │
 │                                         │
-│  GET /api/todos/{todo_id}              │
+│  GET /api/todos/{todo_id}               │
 │  Get a specific todo                    │
-│  [Try it out]                          │
+│  [Try it out]                           │
 │                                         │
 └─────────────────────────────────────────┘
 ```
