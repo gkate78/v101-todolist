@@ -1642,7 +1642,6 @@ python3 scripts/push_db.py --db ./backups/vibecamp_backup_20251108_220530.db --y
 - **Verify file sizes**: Both scripts verify file sizes to ensure successful transfer
 - **Test locally first**: Make database changes locally, test thoroughly, then push to production
 - **Use `--yes` flag carefully**: Only skip confirmation when running automated scripts
-
 ##### Volume Snapshots
 ```bash
 # Create a snapshot of the entire volume
