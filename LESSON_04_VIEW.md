@@ -286,7 +286,7 @@ User sees rendered page
                ↓
 ┌─────────────────────────────────────────┐
 │         Controller                      │
-│  todos = await get_all_todos(db)         │
+│  todos = await get_all_todos(db)        │
 └──────────────┬──────────────────────────┘
                │
                ↓
