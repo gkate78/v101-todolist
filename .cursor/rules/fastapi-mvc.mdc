@@ -9,36 +9,24 @@ alwaysApply: true
 
 ## 🧱 Architecture & Project Structure
 
-### MVC Pattern Organization
+**Description**: Standard MVC organization for FastAPI projects with clear separation of concerns.
+
+### Project Structure
 ```
 project/
 ├── app/
 │   ├── __init__.py
 │   ├── models/          # Database models (SQLAlchemy/SQLModel)
-│   │   ├── __init__.py
-│   │   └── *.py
 │   ├── controllers/     # Business logic layer
-│   │   ├── __init__.py
-│   │   └── *.py
 │   ├── routes/          # API route definitions
-│   │   ├── __init__.py
-│   │   └── *.py
 │   ├── templates/       # Jinja2 templates with TailwindCSS
-│   │   ├── base.html
-│   │   └── *.html
 │   ├── utils/           # Utility functions
-│   │   ├── __init__.py
-│   │   └── *.py
 │   └── database.py      # Database configuration
 ├── tests/               # Test files
 ├── migrations/          # Alembic migrations
 ├── main.py             # FastAPI application entry point
 ├── requirements.txt    # Dependencies
-├── pyproject.toml      # Poetry configuration
-├── Dockerfile          # Container configuration
 ├── fly.toml            # Fly.io deployment config
-├── .env                # Environment variables
-├── .gitignore          # Git ignore rules
 └── README.md           # Project documentation
 ```
 
@@ -49,9 +37,15 @@ project/
 - **Templates** (`app/templates/`): Jinja2 templates with TailwindCSS styling
 - **Utils** (`app/utils/`): Shared utility functions and helpers
 
+---
+
 ## ⚙️ FastAPI Best Practices
 
+**Description**: Core FastAPI patterns for application setup, routing, and dependency injection.
+
 ### Application Setup
+Use lifespan context managers for startup/shutdown logic.
+
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -61,8 +55,7 @@ from fastapi.templating import Jinja2Templates
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan."""
-    # Startup
-    await init_db()
+    await init_db()  # Startup
     yield
     # Shutdown
 
@@ -73,16 +66,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Mount static files and templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 ```
 
-### Route Organization with OpenAPI Tags
+### Route Organization
+Organize routes by feature using `APIRouter` with OpenAPI tags.
+
 ```python
 from fastapi import APIRouter
 
-# Organize routes by feature
 router = APIRouter(prefix="/api/v1", tags=["todos"])
 
 @router.post("/todos", response_model=TodoResponse, tags=["todos"])
@@ -99,9 +92,15 @@ async def create_todo_endpoint(
 - Create reusable dependencies for common operations
 - Use async dependencies for I/O operations
 
-## 🎨 Frontend Best Practices (TailwindCSS + Vanilla JS)
+---
 
-### Template Structure with Jinja2
+## 🎨 Frontend Best Practices
+
+**Description**: TailwindCSS + Vanilla JavaScript frontend patterns with mobile-first responsive design.
+
+### Template Structure
+Use Jinja2 templates with FastAPI for server-side rendering.
+
 ```python
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
@@ -114,7 +113,9 @@ async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 ```
 
-### Base Template (app/templates/base.html)
+### Base Template
+Standard base template with TailwindCSS CDN.
+
 ```html
 <!DOCTYPE html>
 <html lang="en" class="h-full">
@@ -123,18 +124,6 @@ async def read_root(request: Request):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ title or "FastAPI App" }}{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3B82F6',
-                        secondary: '#64748B'
-                    }
-                }
-            }
-        }
-    </script>
     {% block head %}{% endblock %}
 </head>
 <body class="h-full bg-gray-50">
@@ -147,7 +136,7 @@ async def read_root(request: Request):
 ```
 
 ### HTML Best Practices
-- Use semantic HTML5 elements (`<header>`, `<main>`, `<section>`, `<article>`, `<aside>`, `<footer>`)
+- Use semantic HTML5 elements (`<header>`, `<main>`, `<section>`, etc.)
 - Include proper meta tags for SEO and responsive design
 - Use `lang` attribute on `<html>` element
 - Implement proper heading hierarchy (h1 → h2 → h3)
@@ -156,181 +145,60 @@ async def read_root(request: Request):
 
 ### TailwindCSS Guidelines
 - Use utility-first approach with consistent spacing scale
-- Leverage Tailwind's responsive prefixes (`sm:`, `md:`, `lg:`, `xl:`)
+- Leverage responsive prefixes (`sm:`, `md:`, `lg:`, `xl:`)
 - Use CSS Grid and Flexbox utilities for layouts
-- Implement consistent color palette using custom CSS variables
-- Use Tailwind's state variants (`hover:`, `focus:`, `active:`, `disabled:`)
+- Use state variants (`hover:`, `focus:`, `active:`, `disabled:`)
 - Optimize for mobile-first responsive design
 
-### Mobile-First Design Principles
+### Mobile-First Design
+**Core Principles**: Design for mobile first, then enhance for larger screens.
 
-#### Core Mobile-First Approach
-- **Start with mobile**: Design and develop for mobile devices first, then enhance for larger screens
-- **Progressive enhancement**: Add features and complexity as screen size increases
-- **Touch-friendly interfaces**: Ensure all interactive elements are at least 44px (11 in Tailwind) for touch targets
-- **Performance priority**: Optimize for mobile performance with smaller file sizes and faster loading
+**Responsive Breakpoints**:
+- Base: 320px+ (mobile)
+- `sm:`: 640px+ (tablet)
+- `md:`: 768px+ (small desktop)
+- `lg:`: 1024px+ (desktop)
+- `xl:`: 1280px+ (large desktop)
 
-#### Responsive Breakpoints Strategy
-```css
-/* Mobile First - Base styles (320px+) */
-.mobile-first {
-  /* Mobile styles here */
-}
-
-/* Small devices (640px+) */
-@media (min-width: 640px) {
-  .sm:mobile-first {
-    /* Tablet styles */
-  }
-}
-
-/* Medium devices (768px+) */
-@media (min-width: 768px) {
-  .md:mobile-first {
-    /* Small desktop styles */
-  }
-}
-
-/* Large devices (1024px+) */
-@media (min-width: 1024px) {
-  .lg:mobile-first {
-    /* Desktop styles */
-  }
-}
-
-/* Extra large devices (1280px+) */
-@media (min-width: 1280px) {
-  .xl:mobile-first {
-    /* Large desktop styles */
-  }
-}
-```
-
-#### Mobile-First TailwindCSS Patterns
+**Mobile-First Patterns**:
 ```html
-<!-- Mobile-first responsive grid -->
+<!-- Responsive grid -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
   <!-- Content adapts from 1 column on mobile to 4 on xl screens -->
 </div>
 
-<!-- Mobile-first typography scaling -->
+<!-- Responsive typography -->
 <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold">
   Responsive Heading
 </h1>
 
-<!-- Mobile-first spacing -->
+<!-- Responsive spacing -->
 <div class="p-4 sm:p-6 md:p-8 lg:p-12">
   <!-- Padding increases with screen size -->
 </div>
-
-<!-- Mobile-first navigation -->
-<nav class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-  <!-- Stack vertically on mobile, horizontal on larger screens -->
-</nav>
 ```
 
-#### Mobile-Specific Considerations
-- **Viewport meta tag**: Always include `<meta name="viewport" content="width=device-width, initial-scale=1.0">`
-- **Touch gestures**: Support swipe, pinch, and tap interactions
-- **Orientation handling**: Test both portrait and landscape orientations
-- **Thumb navigation**: Place important actions within thumb reach (bottom 1/3 of screen)
-- **Loading states**: Show loading indicators for mobile users with slower connections
-- **Offline support**: Consider service workers for offline functionality
-
-#### Mobile-First Component Examples
-```html
-<!-- Mobile-first card component -->
-<div class="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:p-8">
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-    <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-0">
-      {{ title }}
-    </h3>
-    <button class="w-full sm:w-auto bg-primary text-white px-4 py-2 rounded-md text-sm sm:text-base">
-      Action
-    </button>
-  </div>
-  <p class="text-sm sm:text-base text-gray-600 leading-relaxed">
-    {{ description }}
-  </p>
-</div>
-
-<!-- Mobile-first form -->
-<form class="space-y-4 sm:space-y-6">
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">
-        First Name
-      </label>
-      <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg">
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">
-        Last Name
-      </label>
-      <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg">
-    </div>
-  </div>
-  <button class="w-full sm:w-auto bg-primary text-white px-6 py-3 rounded-md font-medium">
-    Submit
-  </button>
-</form>
-
-<!-- Mobile-first navigation -->
-<nav class="bg-white shadow-lg">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center h-16">
-      <!-- Mobile menu button -->
-      <button class="sm:hidden p-2 rounded-md text-gray-600 hover:text-gray-900">
-        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-      
-      <!-- Desktop navigation -->
-      <div class="hidden sm:flex space-x-8">
-        <a href="#" class="text-gray-700 hover:text-primary px-3 py-2 text-sm font-medium">
-          Home
-        </a>
-        <a href="#" class="text-gray-700 hover:text-primary px-3 py-2 text-sm font-medium">
-          About
-        </a>
-        <a href="#" class="text-gray-700 hover:text-primary px-3 py-2 text-sm font-medium">
-          Contact
-        </a>
-      </div>
-    </div>
-  </div>
-</nav>
-```
-
-#### Performance Optimization for Mobile
-- **Image optimization**: Use responsive images with `srcset` and appropriate formats (WebP, AVIF)
-- **Lazy loading**: Implement lazy loading for images and non-critical content
-- **Critical CSS**: Inline critical CSS for above-the-fold content
-- **Minimal JavaScript**: Keep JavaScript bundle size small and load non-critical JS asynchronously
-- **CDN usage**: Use CDN for static assets to reduce load times
-- **Compression**: Enable gzip/brotli compression for text assets
-
-#### Testing Mobile-First Design
-- **Device testing**: Test on actual mobile devices, not just browser dev tools
-- **Network conditions**: Test on slow 3G connections
-- **Touch testing**: Verify all touch targets are accessible and responsive
-- **Orientation testing**: Test both portrait and landscape modes
-- **Accessibility testing**: Ensure mobile accessibility with screen readers and voice control
+**Mobile Considerations**:
+- Touch targets: Minimum 44px (11 in Tailwind)
+- Viewport meta tag: Always include
+- Test on actual devices, not just browser dev tools
+- Optimize for performance (smaller files, faster loading)
 
 ### Component Patterns
+Standard component patterns for cards, forms, and navigation.
+
 ```html
 <!-- Card Component -->
-<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
+<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
     <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ card.title }}</h3>
     <p class="text-gray-600 mb-4">{{ card.description }}</p>
-    <button class="bg-primary text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+    <button class="bg-primary text-white px-4 py-2 rounded-md hover:bg-blue-700">
         {{ card.button_text }}
     </button>
 </div>
 
 <!-- Form Component -->
-<form class="space-y-4" @submit.prevent="handleSubmit">
+<form class="space-y-4">
     <div>
         <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
             Email Address
@@ -339,7 +207,7 @@ async def read_root(request: Request):
             type="email" 
             id="email" 
             name="email"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
             required
         >
     </div>
@@ -351,107 +219,18 @@ async def read_root(request: Request):
 - Implement proper error handling with try/catch blocks
 - Use event delegation for dynamic content
 - Follow functional programming principles
-- Implement proper form validation
 - Use fetch API for HTTP requests with proper error handling
 
-### JavaScript Patterns
-```javascript
-// API Client with error handling
-class ApiClient {
-    constructor(baseURL) {
-        this.baseURL = baseURL;
-    }
-
-    async request(endpoint, options = {}) {
-        try {
-            const response = await fetch(`${this.baseURL}${endpoint}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
-                ...options
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('API request failed:', error);
-            throw error;
-        }
-    }
-
-    async getTodos() {
-        return this.request('/api/todos');
-    }
-
-    async createTodo(todo) {
-        return this.request('/api/todos', {
-            method: 'POST',
-            body: JSON.stringify(todo)
-        });
-    }
-}
-
-// Form handling with validation
-function handleFormSubmit(formElement, apiClient) {
-    formElement.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const formData = new FormData(formElement);
-        const data = Object.fromEntries(formData);
-        
-        try {
-            await apiClient.createTodo(data);
-            showSuccessMessage('Todo created successfully!');
-            formElement.reset();
-        } catch (error) {
-            showErrorMessage('Failed to create todo. Please try again.');
-        }
-    });
-}
-
-// Utility functions
-function showSuccessMessage(message) {
-    const notification = document.createElement('div');
-    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50';
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-```
-
 ### Frontend Security
-- **Input Sanitization**: Sanitize all user input before displaying (Jinja2 auto-escapes by default)
-- **Content Security Policy (CSP)**: Implement strict CSP headers to prevent XSS attacks
-- **CSRF Protection**: Use CSRF tokens for all state-changing form submissions
-- **Client-Side Validation**: Validate data on client side for UX, but always validate server-side
-- **HTTPS Enforcement**: Use HTTPS in production (never transmit sensitive data over HTTP)
-- **Avoid Inline Scripts**: Never use inline JavaScript or CSS (prevents XSS via CSP)
-- **Secure Cookies**: Use HttpOnly, Secure, and SameSite cookie attributes
-- **Subresource Integrity (SRI)**: Use SRI for external scripts and stylesheets
-- **XSS Prevention**: Never use `innerHTML` with user input; use `textContent` or sanitize with DOMPurify
-- **API Security**: Never expose API keys or tokens in client-side code; use environment variables or secure backend proxy
+- **Input Sanitization**: Jinja2 auto-escapes by default
+- **CSP**: Implement strict Content Security Policy headers
+- **CSRF Protection**: Use CSRF tokens for state-changing operations
+- **HTTPS**: Enforce HTTPS in production
+- **Secure Cookies**: Use HttpOnly, Secure, and SameSite attributes
+- **XSS Prevention**: Never use `innerHTML` with user input
 
 ### Performance Optimization
-- Minimize HTTP requests by combining CSS/JS files
+- Minimize HTTP requests
 - Use Tailwind's purge feature to remove unused styles
 - Implement lazy loading for images
 - Use modern image formats (WebP, AVIF)
@@ -464,71 +243,54 @@ function debounce(func, wait) {
 - Include ARIA labels and roles
 - Ensure sufficient color contrast
 - Provide keyboard navigation support
-- Use screen reader friendly content
+
+---
 
 ## 🎯 Coding Standards & Best Practices
 
+**Description**: Python/FastAPI coding conventions and best practices.
+
 ### Key Principles
-- Write concise, technical responses with accurate Python examples
+- Write concise, technical code with accurate Python examples
 - Use functional, declarative programming; avoid classes where possible
 - Prefer iteration and modularization over code duplication
 - Use descriptive variable names with auxiliary verbs (e.g., `is_active`, `has_permission`)
-- Use lowercase with underscores for directories and files (e.g., `routers/user_routes.py`)
-- Favor named exports for routes and utility functions
+- Use lowercase with underscores for directories and files
 - Use the Receive an Object, Return an Object (RORO) pattern
 
 ### Python/FastAPI Guidelines
 - Use `def` for pure functions and `async def` for asynchronous operations
-- Use type hints for all function signatures. Prefer Pydantic models over raw dictionaries for input validation
-- File structure: exported router, sub-routes, utilities, static content, types (models, schemas)
-- Avoid unnecessary curly braces in conditional statements
-- For single-line statements in conditionals, omit curly braces
-- Use concise, one-line syntax for simple conditional statements (e.g., `if condition: do_something()`)
-
-### Error Handling and Validation
-- Prioritize error handling and edge cases:
-  - Handle errors and edge cases at the beginning of functions
-  - Use early returns for error conditions to avoid deeply nested if statements
-  - Place the happy path last in the function for improved readability
-  - Avoid unnecessary else statements; use the if-return pattern instead
-  - Use guard clauses to handle preconditions and invalid states early
-  - Implement proper error logging and user-friendly error messages
-  - Use custom error types or error factories for consistent error handling
-
-### FastAPI-Specific Guidelines
-- Use functional components (plain functions) and Pydantic models for input validation and response schemas
+- Use type hints for all function signatures
+- Prefer Pydantic models over raw dictionaries for input validation
 - Use declarative route definitions with clear return type annotations
-- Use `def` for synchronous operations and `async def` for asynchronous ones
-- Minimize `@app.on_event("startup")` and `@app.on_event("shutdown")`; prefer lifespan context managers for managing startup and shutdown events
-- Use middleware for logging, error monitoring, and performance optimization
-- Optimize for performance using async functions for I/O-bound tasks, caching strategies, and lazy loading
-- Use HTTPException for expected errors and model them as specific HTTP responses
-- Use middleware for handling unexpected errors, logging, and error monitoring
-- Use Pydantic's BaseModel for consistent input/output validation and response schemas
+- Prefer lifespan context managers over `@app.on_event()`
+
+### Error Handling
+- Handle errors and edge cases at the beginning of functions
+- Use early returns for error conditions
+- Place the happy path last in the function
+- Use guard clauses to handle preconditions early
+- Implement proper error logging and user-friendly error messages
 
 ### Performance Optimization
-- Minimize blocking I/O operations; use asynchronous operations for all database calls and external API requests
-- Implement caching for static and frequently accessed data using tools like Redis or in-memory stores
-- Optimize data serialization and deserialization with Pydantic
-- Use lazy loading techniques for large datasets and substantial API responses
+- Minimize blocking I/O operations
+- Use async operations for all database calls and external API requests
+- Implement caching for static and frequently accessed data
+- Optimize data serialization with Pydantic
+- Use lazy loading for large datasets
 
-### Key Conventions
-1. Rely on FastAPI's dependency injection system for managing state and shared resources
-2. Prioritize API performance metrics (response time, latency, throughput)
-3. Limit blocking operations in routes:
-   - Favor asynchronous and non-blocking flows
-   - Use dedicated async functions for database and external API operations
-   - Structure routes and dependencies clearly to optimize readability and maintainability
+---
 
 ## 🗃️ Database (SQLite + ORM)
 
-### SQLAlchemy/SQLModel Setup
+**Description**: SQLAlchemy/SQLModel setup and CRUD operations with async SQLite.
+
+### Database Setup
 ```python
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
-# Database configuration
 DATABASE_URL = "sqlite+aiosqlite:///./database.db"
 engine = create_async_engine(DATABASE_URL, echo=True)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -556,7 +318,7 @@ class Todo(SQLModel, table=True):
     completed: bool = Field(default=False)
 ```
 
-### CRUD Operations with ORM
+### CRUD Operations
 ```python
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -581,7 +343,11 @@ async def get_todo(db: AsyncSession, todo_id: int) -> Optional[TodoResponse]:
 - Store migration files in `migrations/` directory
 - Always test migrations on staging before production
 
+---
+
 ## Error Handling
+
+**Description**: HTTP status codes and exception patterns for FastAPI.
 
 ### HTTP Status Codes
 - **200**: Success (GET, PUT)
@@ -600,28 +366,20 @@ from fastapi import HTTPException
 if not todo:
     raise HTTPException(status_code=404, detail="Todo not found")
 
-# Operation failed
-if not success:
-    raise HTTPException(status_code=404, detail="Todo not found")
+# Database error handling
+try:
+    # Database operation
+    await db.commit()
+except Exception as e:
+    await db.rollback()
+    raise HTTPException(status_code=500, detail="Database error")
 ```
 
-### Database Error Handling
-```python
-async def create_todo(db: aiosqlite.Connection, todo: TodoCreate) -> TodoResponse:
-    try:
-        cursor = await db.execute(
-            "INSERT INTO todos (title, completed) VALUES (?, ?)",
-            (todo.title, False)
-        )
-        await db.commit()
-        todo_id = cursor.lastrowid
-        return TodoResponse(id=todo_id, title=todo.title, completed=False)
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(status_code=500, detail="Database error")
-```
+---
 
 ## Type Safety and Validation
+
+**Description**: Type hints and Pydantic validation patterns.
 
 ### Type Hints
 - Always use type hints for function parameters and return types
@@ -634,122 +392,43 @@ async def create_todo(db: aiosqlite.Connection, todo: TodoCreate) -> TodoRespons
 - Returns 422 status code for validation errors
 - Provides detailed error messages for invalid fields
 
-## Performance Best Practices
-
-### Async Operations
-- Use `async def` for all route handlers
-- Use `await` for all database operations
-- Avoid blocking operations in route handlers
-
-### Database Best Practices
-- Use connection pooling via dependency injection
-- Commit transactions explicitly
-- Handle database errors gracefully
-- Use parameterized queries to prevent SQL injection
-- Implement proper indexes on frequently queried columns
+---
 
 ## 🔒 Security Best Practices
 
-### Dependency Security Management
+**Description**: Comprehensive security guidelines for FastAPI applications.
 
-#### Regular Dependency Audits
-- **Automated Scanning**: Use `pip-audit` or `safety` to regularly scan dependencies for known vulnerabilities
-- **Dependency Updates**: Regularly update dependencies to latest secure versions
-- **Version Pinning**: Pin exact versions in `requirements.txt` for production (`==`), use ranges (`>=`) only for patch updates
-- **Security Advisories**: Subscribe to security advisories for critical dependencies (FastAPI, SQLAlchemy, etc.)
-- **Vulnerability Monitoring**: Set up automated alerts for dependency vulnerabilities (GitHub Dependabot, Snyk, etc.)
+### Dependency Security
+- Use `pip-audit` or `safety` to scan for vulnerabilities
+- Pin exact versions in `requirements.txt` for production (`==`)
+- Regularly update dependencies
+- Set up automated alerts (GitHub Dependabot, Snyk)
 
-#### Dependency Scanning Tools
-```bash
-# Install security scanning tools
-pip install pip-audit safety
+### SQL Injection Prevention
+**Always use parameterized queries or ORM** - Never concatenate user input.
 
-# Scan for vulnerabilities
-pip-audit
-safety check
+```python
+# ✅ CORRECT: Use ORM
+result = await db.execute(select(User).where(User.id == user_id))
 
-# Check for outdated packages
-pip list --outdated
+# ✅ CORRECT: Parameterized queries
+result = await db.execute(text("SELECT * FROM users WHERE id = :user_id"), {"user_id": user_id})
 
-# Update dependencies safely
-pip install --upgrade package-name
+# ❌ WRONG: Never do this
+# result = await db.execute(f"SELECT * FROM users WHERE id = {user_id}")
 ```
 
-#### Secure Dependency Management
+### XSS Prevention
+- Jinja2 auto-escapes by default
+- Never use `innerHTML` with user input
+- Use `textContent` or sanitize with DOMPurify
+- Implement strict CSP headers
+
+### CSRF Protection
+Use CSRF tokens for all state-changing operations.
+
 ```python
-# requirements.txt - Pin exact versions for production
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
-sqlalchemy[asyncio]==2.0.36
-# ... other dependencies
-
-# Use requirements-dev.txt for development-only dependencies
-# pytest==7.4.3
-# pytest-asyncio==0.21.1
-# httpx==0.25.2
-```
-
-#### Third-Party Package Security
-- **Verify Sources**: Only install packages from PyPI or trusted sources
-- **Check Package Maintainers**: Verify package maintainers and community support
-- **Review Dependencies**: Check transitive dependencies for vulnerabilities
-- **Avoid Unmaintained Packages**: Prefer actively maintained packages with recent updates
-- **Use Official Packages**: Prefer official packages over third-party alternatives when available
-
-### Code-Level Security
-
-#### SQL Injection Prevention
-```python
-# ✅ CORRECT: Always use parameterized queries with ORM
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
-
-async def get_user(db: AsyncSession, user_id: int):
-    result = await db.execute(select(User).where(User.id == user_id))
-    return result.scalar_one_or_none()
-
-# ✅ CORRECT: Use parameterized queries with raw SQL
-async def get_user_raw(db: AsyncSession, user_id: int):
-    result = await db.execute(text("SELECT * FROM users WHERE id = :user_id"), {"user_id": user_id})
-    return result.fetchone()
-
-# ❌ WRONG: Never concatenate user input
-# async def get_user_unsafe(db: AsyncSession, user_id: str):
-#     result = await db.execute(f"SELECT * FROM users WHERE id = {user_id}")  # SQL INJECTION VULNERABILITY
-```
-
-#### Cross-Site Scripting (XSS) Prevention
-```python
-# ✅ CORRECT: Jinja2 auto-escapes by default, but be explicit
-from fastapi.templating import Jinja2Templates
-
-templates = Jinja2Templates(directory="app/templates")
-
-@app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    # User input is automatically escaped by Jinja2
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "user_input": request.query_params.get("q", "")  # Safely escaped
-    })
-
-# ✅ CORRECT: Sanitize user input before displaying
-from markupsafe import Markup
-
-# For trusted HTML content (use with caution)
-safe_html = Markup(user_submitted_html)
-```
-
-#### Cross-Site Request Forgery (CSRF) Protection
-```python
-# ✅ CORRECT: Use CSRF tokens for state-changing operations
 from fastapi_csrf_protect import CsrfProtect
-from fastapi_csrf_protect.exceptions import CsrfProtectError
-
-@CsrfProtect.load_config
-def get_csrf_config():
-    return CsrfSettings(secret_key=os.getenv("SECRET_KEY"))
 
 @app.post("/create")
 async def create_item(request: Request, csrf_protect: CsrfProtect = Depends()):
@@ -757,259 +436,79 @@ async def create_item(request: Request, csrf_protect: CsrfProtect = Depends()):
     # Process request...
 ```
 
-#### Input Validation and Sanitization
+### Input Validation
+Use Pydantic models for all input validation.
+
 ```python
-# ✅ CORRECT: Use Pydantic models for validation
-from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional
-import re
+from pydantic import BaseModel, EmailStr, Field
 
 class UserCreate(BaseModel):
-    email: EmailStr  # Validates email format
-    username: str = Field(..., min_length=3, max_length=50, regex="^[a-zA-Z0-9_]+$")
-    password: str = Field(..., min_length=8, max_length=128)
-    phone: Optional[str] = Field(None, max_length=20)
-    
-    @validator('password')
-    def validate_password(cls, v):
-        if not re.search(r'[A-Z]', v):
-            raise ValueError('Password must contain at least one uppercase letter')
-        if not re.search(r'[a-z]', v):
-            raise ValueError('Password must contain at least one lowercase letter')
-        if not re.search(r'\d', v):
-            raise ValueError('Password must contain at least one digit')
-        return v
-
-@app.post("/users")
-async def create_user(user: UserCreate):
-    # Input is automatically validated by Pydantic
-    return await create_user_in_db(user)
+    email: EmailStr
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=8)
 ```
 
-#### Authentication and Authorization
+### Authentication & Authorization
+- Use secure session management with HttpOnly cookies
+- Hash passwords with bcrypt (never store plain text)
+- Use cryptographically secure tokens
+- Implement proper authorization checks
+
+### Password Security
 ```python
-# ✅ CORRECT: Use secure session management
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import secrets
-from datetime import datetime, timedelta
-
-security = HTTPBearer()
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
-):
-    token = credentials.credentials
-    session = await get_session_by_token(db, token)
-    
-    if not session or session.expires_at < datetime.utcnow():
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token"
-        )
-    
-    return session.user
-
-async def require_admin(user: User = Depends(get_current_user)):
-    if not user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    return user
-
-@app.delete("/users/{user_id}")
-async def delete_user(
-    user_id: int,
-    admin: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_db)
-):
-    # Only admins can delete users
-    return await delete_user_from_db(db, user_id)
-```
-
-#### Password Security
-```python
-# ✅ CORRECT: Hash passwords with bcrypt
-import bcrypt
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt."""
     return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash."""
     return pwd_context.verify(plain_password, hashed_password)
-
-# ✅ CORRECT: Never store plain text passwords
-# ❌ WRONG: user.password = password  # NEVER DO THIS
-# ✅ CORRECT: user.password_hash = hash_password(password)
 ```
 
-#### Secure Session Management
+### Secure Session Management
 ```python
-# ✅ CORRECT: Use secure, HttpOnly cookies with proper expiration
-from fastapi.responses import RedirectResponse
 import secrets
 from datetime import datetime, timedelta
 
 async def create_session(user_id: int, db: AsyncSession):
-    token = secrets.token_urlsafe(32)  # Generate cryptographically secure token
+    token = secrets.token_urlsafe(32)  # Cryptographically secure
     expires_at = datetime.utcnow() + timedelta(days=1)
-    
-    session = Session(token=token, user_id=user_id, expires_at=expires_at)
-    db.add(session)
-    await db.commit()
-    
-    return session
+    # ... create session ...
 
-@app.post("/login")
-async def login(response: Response, db: AsyncSession = Depends(get_db)):
-    # ... authenticate user ...
-    session = await create_session(user.id, db)
-    
-    # Set secure cookie
-    response.set_cookie(
-        key="session_token",
-        value=session.token,
-        httponly=True,  # Prevents JavaScript access
-        secure=True,     # HTTPS only in production
-        samesite="lax", # CSRF protection
-        max_age=86400   # 24 hours
-    )
-    return response
-```
-
-#### API Security
-```python
-# ✅ CORRECT: Rate limiting to prevent abuse
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-@app.post("/api/endpoint")
-@limiter.limit("10/minute")  # Limit to 10 requests per minute
-async def protected_endpoint(request: Request):
-    # Process request...
-```
-
-#### File Upload Security
-```python
-# ✅ CORRECT: Validate file uploads
-from fastapi import UploadFile, File
-import magic
-from pathlib import Path
-
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf"}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    # Check file extension
-    file_ext = Path(file.filename).suffix.lower()
-    if file_ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="File type not allowed")
-    
-    # Check file size
-    contents = await file.read()
-    if len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File too large")
-    
-    # Verify file type using magic bytes (not just extension)
-    file_type = magic.from_buffer(contents, mime=True)
-    if not file_type.startswith(("image/", "application/pdf")):
-        raise HTTPException(status_code=400, detail="Invalid file type")
-    
-    # Save file securely (outside web root, with random filename)
-    secure_filename = secrets.token_urlsafe(16) + file_ext
-    file_path = Path("uploads") / secure_filename
-    file_path.write_bytes(contents)
-    
-    return {"filename": secure_filename}
-```
-
-#### Secrets Management
-```python
-# ✅ CORRECT: Use environment variables for secrets
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Never hardcode secrets in code
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY environment variable not set")
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-API_KEY = os.getenv("API_KEY")
-
-# ✅ CORRECT: Use secrets for cryptographic operations
-import secrets
-
-# Generate secure random tokens
-token = secrets.token_urlsafe(32)
-session_id = secrets.token_hex(16)
-
-# ❌ WRONG: Never use predictable or weak secrets
-# token = "my-secret-token"  # NEVER DO THIS
-# token = "12345"  # NEVER DO THIS
-```
-
-#### Error Handling Without Information Disclosure
-```python
-# ✅ CORRECT: Generic error messages for users, detailed logs for developers
-import logging
-
-logger = logging.getLogger(__name__)
-
-@app.post("/users")
-async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
-    try:
-        return await create_user_in_db(db, user)
-    except ValueError as e:
-        # Log detailed error for debugging
-        logger.error(f"Validation error creating user: {str(e)}", exc_info=True)
-        # Return generic message to user
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid user data provided"
-        )
-    except Exception as e:
-        # Log full error details
-        logger.error(f"Unexpected error creating user: {str(e)}", exc_info=True)
-        # Return generic message to user
-        raise HTTPException(
-            status_code=500,
-            detail="An error occurred processing your request"
-        )
-```
-
-#### Security Headers
-```python
-# ✅ CORRECT: Add security headers middleware
-from fastapi.middleware.security import SecurityHeadersMiddleware
-
-app.add_middleware(
-    SecurityHeadersMiddleware,
-    max_age=31536000,  # 1 year
-    force_https=True,
-    strict_transport_security=True,
-    content_security_policy="default-src 'self'",
-    x_content_type_options="nosniff",
-    x_frame_options="DENY",
-    x_xss_protection="1; mode=block"
+# Set secure cookie
+response.set_cookie(
+    key="session_token",
+    value=session.token,
+    httponly=True,  # Prevents JavaScript access
+    secure=True,     # HTTPS only
+    samesite="lax", # CSRF protection
+    max_age=86400
 )
+```
 
-# Custom security headers
+### API Security
+- Implement rate limiting to prevent abuse
+- Use rate limiting libraries like `slowapi`
+- Restrict CORS to specific origins (never use `["*"]` in production)
+
+### File Upload Security
+- Validate file extensions and sizes
+- Verify file type using magic bytes (not just extension)
+- Save files with random filenames outside web root
+- Use secure file paths
+
+### Secrets Management
+- **Never hardcode secrets** in code
+- Use environment variables for all secrets
+- Use `secrets` module for cryptographic operations
+- Never use predictable or weak secrets
+
+### Security Headers
+Add security headers middleware for protection.
+
+```python
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -1017,68 +516,51 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
     return response
 ```
 
-#### CORS Configuration
+### CORS Configuration
+Restrict CORS to specific origins in production.
+
 ```python
-# ✅ CORRECT: Restrict CORS to specific origins
 from fastapi.middleware.cors import CORSMiddleware
 
-# Production: Specific origins only
-ALLOWED_ORIGINS = [
-    "https://yourdomain.com",
-    "https://www.yourdomain.com",
-]
+ALLOWED_ORIGINS = ["https://yourdomain.com"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,  # Never use ["*"] in production
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["*"],
-    max_age=3600,
 )
-
-# ❌ WRONG: Never allow all origins in production
-# allow_origins=["*"]  # SECURITY RISK
 ```
 
 ### Security Checklist
-
-#### Pre-Deployment Security Audit
+**Pre-Deployment**:
 - [ ] All dependencies are up-to-date and vulnerability-free
-- [ ] All user inputs are validated using Pydantic models
-- [ ] SQL queries use parameterized queries or ORM (no string concatenation)
-- [ ] Passwords are hashed using bcrypt or similar
+- [ ] All user inputs validated using Pydantic models
+- [ ] SQL queries use parameterized queries or ORM
+- [ ] Passwords hashed using bcrypt
 - [ ] Session tokens are cryptographically secure and HttpOnly
-- [ ] CSRF protection is enabled for state-changing operations
-- [ ] File uploads are validated (type, size, content)
+- [ ] CSRF protection enabled for state-changing operations
+- [ ] File uploads validated (type, size, content)
 - [ ] Error messages don't expose sensitive information
-- [ ] Security headers are configured (CSP, HSTS, etc.)
-- [ ] CORS is restricted to specific origins (not "*")
-- [ ] Rate limiting is implemented for API endpoints
-- [ ] Secrets are stored in environment variables (not in code)
-- [ ] HTTPS is enforced in production
-- [ ] Database credentials are secured
-- [ ] Logging doesn't expose sensitive data (passwords, tokens, etc.)
+- [ ] Security headers configured
+- [ ] CORS restricted to specific origins
+- [ ] Rate limiting implemented
+- [ ] Secrets stored in environment variables
+- [ ] HTTPS enforced in production
 
-#### Regular Security Maintenance
-- [ ] Weekly dependency vulnerability scans
-- [ ] Monthly dependency updates
-- [ ] Quarterly security audit
-- [ ] Regular penetration testing
-- [ ] Security headers validation
-- [ ] Session management review
-- [ ] Access control verification
+---
 
 ## Development Guidelines
 
+**Description**: Code organization and testing considerations.
+
 ### Code Organization
 - Keep functions focused and single-purpose
-- Use descriptive variable names with auxiliary verbs (e.g., `is_active`, `has_permission`)
-- Prefer functional programming over classes where possible
+- Use descriptive variable names
+- Prefer functional programming over classes
 - Use early returns for error conditions
 - Place the happy path last in functions
 
@@ -1086,8 +568,8 @@ app.add_middleware(
 1. **Early Validation**: Validate input as early as possible
 2. **Clear Messages**: Provide clear, actionable error messages
 3. **Consistent Format**: Use consistent error response format
-4. **Graceful Degradation**: Handle errors gracefully without crashing
-5. **Security**: Don't expose sensitive information in error messages
+4. **Graceful Degradation**: Handle errors gracefully
+5. **Security**: Don't expose sensitive information
 
 ### Testing Considerations
 - Each layer can be tested independently
@@ -1095,7 +577,11 @@ app.add_middleware(
 - Mock database connections in unit tests
 - Test error conditions and edge cases
 
+---
+
 ## Dependencies
+
+**Description**: Required and optional packages for FastAPI projects.
 
 ### Required Packages
 ```
@@ -1119,67 +605,48 @@ safety>=2.3.0     # Alternative vulnerability scanner
 bandit>=1.7.5     # Security linting for Python code
 ```
 
+---
+
 ## 🚀 Advanced Architecture & Scalability
 
+**Description**: Patterns for building scalable FastAPI applications.
+
 ### Microservices Principles
-- Design services to be stateless; leverage external storage and caches (e.g., Redis) for state persistence
-- Implement API gateways and reverse proxies (e.g., NGINX, Traefik) for handling traffic to microservices
-- Use circuit breakers and retries for resilient service communication
-- Favor serverless deployment for reduced infrastructure overhead in scalable environments
-- Use asynchronous workers (e.g., Celery, RQ) for handling background tasks efficiently
+- Design services to be stateless
+- Use external storage and caches (Redis) for state
+- Implement API gateways and reverse proxies
+- Use circuit breakers and retries
+- Use asynchronous workers (Celery, RQ) for background tasks
 
-### API Gateway Integration
-- Integrate FastAPI services with API Gateway solutions like Kong or AWS API Gateway
-- Use API Gateway for rate limiting, request transformation, and security filtering
-- Design APIs with clear separation of concerns to align with microservices principles
-- Implement inter-service communication using message brokers (e.g., RabbitMQ, Kafka) for event-driven architectures
-
-### Serverless and Cloud-Native Patterns
-- Optimize FastAPI apps for serverless environments (e.g., AWS Lambda, Azure Functions) by minimizing cold start times
-- Package FastAPI applications using lightweight containers or as a standalone binary for deployment in serverless setups
-- Use managed services (e.g., AWS DynamoDB, Azure Cosmos DB) for scaling databases without operational overhead
-- Implement automatic scaling with serverless functions to handle variable loads effectively
-
-### Advanced Middleware and Security
-- Implement custom middleware for detailed logging, tracing, and monitoring of API requests
-- Use OpenTelemetry or similar libraries for distributed tracing in microservices architectures
-- Apply security best practices: OAuth2 for secure API access, rate limiting, and DDoS protection
-- Use security headers (e.g., CORS, CSP) and implement content validation using tools like OWASP Zap
-
-### Performance and Scalability Optimization
-- Leverage FastAPI's async capabilities for handling large volumes of simultaneous connections efficiently
-- Optimize backend services for high throughput and low latency; use databases optimized for read-heavy workloads (e.g., Elasticsearch)
-- Use caching layers (e.g., Redis, Memcached) to reduce load on primary databases and improve API response times
-- Apply load balancing and service mesh technologies (e.g., Istio, Linkerd) for better service-to-service communication and fault tolerance
+### Performance Optimization
+- Leverage FastAPI's async capabilities
+- Use caching layers (Redis, Memcached)
+- Optimize for high throughput and low latency
+- Apply load balancing and service mesh technologies
 
 ### Monitoring and Logging
-- Use Prometheus and Grafana for monitoring FastAPI applications and setting up alerts
-- Implement structured logging for better log analysis and observability
-- Integrate with centralized logging systems (e.g., ELK Stack, AWS CloudWatch) for aggregated logging and monitoring
+- Use Prometheus and Grafana for monitoring
+- Implement structured logging
+- Integrate with centralized logging systems (ELK Stack, CloudWatch)
 
-### Advanced Conventions
-1. Follow microservices principles for building scalable and maintainable services
-2. Optimize FastAPI applications for serverless and cloud-native deployments
-3. Apply advanced security, monitoring, and optimization techniques to ensure robust, performant APIs
+---
 
 ## 🚀 Fly.io Deployment & Volume Persistence
 
-### Volume Configuration for Data Persistence
+**Description**: Fly.io deployment configuration and volume management for persistent data.
 
-#### Critical: Always Use Volumes for Persistent Data
-When deploying to Fly.io, **ALWAYS** configure volumes to persist:
-- **Database files** (`.db` files - SQLite databases)
-- **Log files** (application logs, error logs)
-- **Uploaded files** (user uploads, media files)
-- **Session data** (if stored on disk)
-- **Any other persistent data** that must survive deployments and restarts
-
+### Critical: Always Use Volumes for Persistent Data
 **Without volumes, all data will be lost on deployment or machine restart!**
 
-#### Fly.toml Volume Configuration
-```toml
-# fly.toml
+Configure volumes for:
+- Database files (`.db` files)
+- Log files
+- Uploaded files
+- Session data
+- Any other persistent data
 
+### Fly.toml Volume Configuration
+```toml
 [app]
 app = "your-app-name"
 primary_region = "lax"
@@ -1189,15 +656,10 @@ source = "your_app_data"
 destination = "/data"
 ```
 
-#### Database Configuration for Fly.io
+### Database Configuration for Fly.io
 ```python
-# app/database.py
 import os
 from pathlib import Path
-
-# SQLite database path - use volume on Fly.io, local file for development
-# On Fly.io, volumes are mounted at /data
-# Check if we're on Fly.io by checking if /data exists or DATABASE_URL env var
 
 # Determine database path
 if os.path.exists("/data"):
@@ -1207,606 +669,96 @@ else:
     # Development - use local file
     DB_PATH = Path("./vibecamp.db")
 
-# Ensure directory exists
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-
 DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 ```
 
-#### Log File Configuration for Fly.io
-```python
-# app/logging_config.py
-import os
-import logging
-from pathlib import Path
-
-# Determine log directory
-if os.path.exists("/data"):
-    # Production on Fly.io - use volume
-    LOG_DIR = Path("/data/logs")
-else:
-    # Development - use local logs directory
-    LOG_DIR = Path("./logs")
-
-# Ensure directory exists
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_DIR / "app.log"),
-        logging.FileHandler(LOG_DIR / "error.log", level=logging.ERROR),
-        logging.StreamHandler()  # Also log to stdout for Fly.io logs
-    ]
-)
-```
-
-#### Creating and Attaching Volumes
-
-##### Initial Volume Creation
+### Volume Management Commands
 ```bash
-# Create a volume for your app
+# Create volume
 fly volumes create your_app_data --size 10 --region lax
 
-# Verify volume was created
-fly volumes list
-```
-
-##### Attaching Volume to Machine
-```bash
-# If volume is not automatically attached, attach it manually
-fly machine update <machine-id> --volume your_app_data:/data
-```
-
-##### Volume Management Commands
-```bash
-# List all volumes
+# List volumes
 fly volumes list
 
-# Inspect a specific volume
-fly volumes show your_app_data
-
-# Extend volume size (if needed)
+# Extend volume size
 fly volumes extend your_app_data --size 20
 
-# Create snapshot (backup)
+# Create snapshot
 fly volumes snapshot your_app_data
 ```
 
-#### Complete Fly.toml Example with Volume
-```toml
-app = "your-app-name"
-primary_region = "lax"
+### Database Backup Scripts
+Create two scripts in `scripts/` directory:
 
-[build]
-  dockerfile = "Dockerfile"
-
-[env]
-  PORT = "8000"
-  DATABASE_URL = "sqlite+aiosqlite:///data/vibecamp.db"
-
-[http_service]
-  internal_port = 8000
-  force_https = true
-  auto_stop_machines = true
-  auto_start_machines = true
-  min_machines_running = 1
-  processes = ['app']
-
-[[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
-  cpus = 1
-
-# CRITICAL: Mount volume for persistent data
-[[mounts]]
-  source = "your_app_data"
-  destination = "/data"
-```
-
-#### Volume Best Practices
-
-##### Volume Size Planning
-- **Small apps**: Start with 10GB
-- **Medium apps**: 20-50GB
-- **Large apps**: 100GB+ as needed
-- **Monitor usage**: Check volume usage regularly
-- **Extend when needed**: Use `fly volumes extend` to increase size
-
-##### Volume Path Structure
-```
-/data/
-├── vibecamp.db          # SQLite database
-├── logs/                # Application logs
-│   ├── app.log
-│   ├── error.log
-│   └── access.log
-├── uploads/             # User uploaded files
-│   ├── images/
-│   └── documents/
-└── backups/             # Database backups
-    └── backup_*.db
-```
-
-##### Database Path Configuration
-```python
-# ✅ CORRECT: Use volume path in production
-if os.path.exists("/data"):
-    DATABASE_URL = "sqlite+aiosqlite:///data/vibecamp.db"
-else:
-    DATABASE_URL = "sqlite+aiosqlite:///./vibecamp.db"
-```
-
-##### Pre-Deployment Checklist
-- [ ] Volume created and attached (`fly volumes list`)
-- [ ] Database path configured to use `/data/` directory
-- [ ] Log directory configured to use `/data/logs/`
-- [ ] Upload directory configured to use `/data/uploads/`
-- [ ] Volume size sufficient for expected data growth
-- [ ] Backup strategy in place for volume data
-- [ ] Volume persistence verified after deployment
-
-#### Backup Strategy for Volumes
-
-##### Database Management Scripts
-
-For any FastAPI project using Fly.io volumes, create two essential scripts in the `scripts/` directory:
-
-**1. Backup Script (`scripts/backup_db.py`)**
-- Downloads database from Fly.io production volume to local backups directory
+**1. Backup Script** (`scripts/backup_db.py`):
+- Downloads database from Fly.io production volume
 - Creates timestamped backup files
 - Verifies download success
 
-**2. Push Script (`scripts/push_db.py`)**
+**2. Push Script** (`scripts/push_db.py`):
 - Uploads local database file to Fly.io production volume
 - Includes safety confirmation prompt
 - Verifies upload success
 
-##### Backup Database from Fly.io
-
-**Script Location**: `scripts/backup_db.py`
-
 **Usage**:
 ```bash
-# Basic usage (defaults to 'vibecamp' app and './backups' directory)
+# Backup production database
 python3 scripts/backup_db.py
 
-# Custom app name and output directory
-python3 scripts/backup_db.py --app your-app-name --output-dir ./backups
-```
-
-**What it does**:
-1. Connects to Fly.io app via SSH
-2. Checks if database file exists at `/data/vibecamp.db`
-3. Downloads database using base64 encoding
-4. Saves to `./backups/vibecamp_backup_YYYYMMDD_HHMMSS.db`
-5. Verifies file size and reports success
-
-**Example Output**:
-```
-🚀 Starting database backup process...
-   App: vibecamp
-   Output: ./backups
-
-🔄 Connecting to Fly.io app: vibecamp
-📥 Downloading database from /data/vibecamp.db...
-   Checking if database file exists...
-   Downloading database file (using base64 encoding)...
-✅ Backup completed successfully!
-   File: ./backups/vibecamp_backup_20251108_220530.db
-   Size: 0.04 MB
-   Timestamp: 20251108_220530
-
-✅ Backup process completed successfully!
-```
-
-##### Push Database to Fly.io
-
-**Script Location**: `scripts/push_db.py`
-
-**Usage**:
-```bash
-# Interactive mode (asks for confirmation)
-python3 scripts/push_db.py
-
-# Skip confirmation prompt
-python3 scripts/push_db.py --yes
-
-# Custom database file and app name
-python3 scripts/push_db.py --db ./vibecamp.db --app your-app-name --yes
-```
-
-**What it does**:
-1. Reads local database file (default: `./vibecamp.db`)
-2. Encodes file as base64
-3. Uploads to `/data/vibecamp.db` on Fly.io volume
-4. Uses Python on remote side for reliable binary file handling
-5. Verifies upload success and file size
-
-**Example Output**:
-```
-🚀 Starting database push process...
-
-⚠️  WARNING: Overwriting production database (--yes flag used)
-
-🔄 Preparing to push database to Fly.io...
-   Local file: vibecamp.db
-   Size: 0.04 MB
-   Target: /data/vibecamp.db on vibecamp
-
-📖 Reading local database file...
-🔐 Encoding database file (base64)...
-📤 Uploading to Fly.io...
-   (This may take a moment for large databases)
-✅ Database uploaded successfully!
-
-📊 Upload verification:
-   File size: 45056 bytes
-
-✅ Push process completed successfully!
-   The production database has been updated.
-```
-
-##### Script Implementation Template
-
-**Backup Script Template** (`scripts/backup_db.py`):
-```python
-#!/usr/bin/env python3
-"""
-Backup SQLite database from Fly.io production volume.
-
-This script:
-1. Connects to the Fly.io app
-2. Downloads the database file from /data/vibecamp.db
-3. Saves it locally with a timestamp
-"""
-
-import subprocess
-import sys
-import base64
-from datetime import datetime
-from pathlib import Path
-
-def backup_database(fly_app_name: str = "vibecamp", output_dir: str = "./backups"):
-    """Backup the database from Fly.io production."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-    
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_filename = f"vibecamp_backup_{timestamp}.db"
-    backup_path = output_path / backup_filename
-    
-    # Check if database exists
-    check_cmd = [
-        "flyctl", "ssh", "console",
-        "-a", fly_app_name,
-        "-C", "test -f /data/vibecamp.db && echo 'exists' || echo 'not found'"
-    ]
-    
-    result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=30)
-    
-    if "not found" in result.stdout:
-        print("❌ Database file not found at /data/vibecamp.db")
-        return False
-    
-    # Download using base64 encoding
-    download_cmd = [
-        "flyctl", "ssh", "console",
-        "-a", fly_app_name,
-        "-C", "base64 /data/vibecamp.db"
-    ]
-    
-    result = subprocess.run(download_cmd, capture_output=True, text=True, timeout=60)
-    
-    if result.returncode != 0:
-        print(f"❌ Failed to download database: {result.stderr}")
-        return False
-    
-    # Decode and save
-    try:
-        base64_data = result.stdout.strip()
-        decoded_data = base64.b64decode(base64_data)
-        
-        with open(backup_path, 'wb') as f:
-            f.write(decoded_data)
-        
-        file_size = backup_path.stat().st_size
-        file_size_mb = file_size / (1024 * 1024)
-        print(f"✅ Backup completed successfully!")
-        print(f"   File: {backup_path}")
-        print(f"   Size: {file_size_mb:.2f} MB")
-        return True
-    except Exception as e:
-        print(f"❌ Failed to decode database file: {str(e)}")
-        return False
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Backup SQLite database from Fly.io")
-    parser.add_argument("--app", default="vibecamp", help="Fly.io app name")
-    parser.add_argument("--output-dir", default="./backups", help="Output directory")
-    args = parser.parse_args()
-    
-    success = backup_database(args.app, args.output_dir)
-    sys.exit(0 if success else 1)
-```
-
-**Push Script Template** (`scripts/push_db.py`):
-```python
-#!/usr/bin/env python3
-"""
-Push local SQLite database to Fly.io production volume.
-
-This script:
-1. Reads the local vibecamp.db file
-2. Encodes it as base64
-3. Uploads it to /data/vibecamp.db on Fly.io
-"""
-
-import subprocess
-import sys
-import base64
-from pathlib import Path
-
-def push_database(local_db_path: str = "./vibecamp.db", fly_app_name: str = "vibecamp"):
-    """Push the local database to Fly.io production."""
-    local_path = Path(local_db_path)
-    
-    if not local_path.exists():
-        print(f"❌ Local database file not found: {local_db_path}")
-        return False
-    
-    # Read and encode database
-    with open(local_path, 'rb') as f:
-        db_data = f.read()
-    
-    base64_data = base64.b64encode(db_data).decode('utf-8')
-    
-    # Upload using Python on remote side
-    upload_cmd = """python3 -c "
-import base64
-import sys
-data = sys.stdin.read()
-decoded = base64.b64decode(data)
-with open('/data/vibecamp.db', 'wb') as f:
-    f.write(decoded)
-print('SUCCESS')
-import os
-size = os.path.getsize('/data/vibecamp.db')
-print(f'File size: {size} bytes')
-" """
-    
-    process = subprocess.Popen(
-        ["flyctl", "ssh", "console", "-a", fly_app_name, "-C", upload_cmd],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-    
-    stdout, stderr = process.communicate(input=base64_data, timeout=180)
-    
-    if process.returncode != 0 or "SUCCESS" not in stdout:
-        print(f"❌ Failed to upload database: {stderr}")
-        return False
-    
-    print("✅ Database uploaded successfully!")
-    return True
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Push local database to Fly.io")
-    parser.add_argument("--db", default="./vibecamp.db", help="Local database path")
-    parser.add_argument("--app", default="vibecamp", help="Fly.io app name")
-    parser.add_argument("--yes", action="store_true", help="Skip confirmation")
-    args = parser.parse_args()
-    
-    if not args.yes:
-        response = input("⚠️  Overwrite production database? (yes/no): ")
-        if response.lower() != "yes":
-            print("❌ Push cancelled.")
-            sys.exit(0)
-    
-    success = push_database(args.db, args.app)
-    sys.exit(0 if success else 1)
-```
-
-##### Database Management Workflow
-
-**Regular Backup Workflow**:
-```bash
-# 1. Backup production database before making changes
-python3 scripts/backup_db.py
-
-# 2. Make local changes/test locally
-# ... development work ...
-
-# 3. Push updated database to production (if needed)
+# Push local database to production
 python3 scripts/push_db.py --yes
 ```
 
-**Restore from Backup**:
-```bash
-# 1. List available backups
-ls -lh backups/
+### Volume Best Practices
+- **Small apps**: Start with 10GB
+- **Medium apps**: 20-50GB
+- **Large apps**: 100GB+ as needed
+- Monitor usage regularly
+- Always backup before pushing changes
 
-# 2. Push specific backup to production
-python3 scripts/push_db.py --db ./backups/vibecamp_backup_20251108_220530.db --yes
-```
-
-**Best Practices**:
-- **Always backup before pushing**: Run `backup_db.py` before `push_db.py` to create a restore point
-- **Use timestamped backups**: Keep multiple backup versions for rollback capability
-- **Verify file sizes**: Both scripts verify file sizes to ensure successful transfer
-- **Test locally first**: Make database changes locally, test thoroughly, then push to production
-- **Use `--yes` flag carefully**: Only skip confirmation when running automated scripts
-##### Volume Snapshots
-```bash
-# Create a snapshot of the entire volume
-fly volumes snapshot your_app_data
-
-# List snapshots
-fly volumes snapshots list your_app_data
-```
-
-##### Manual Backup Commands
-```bash
-# SSH into machine and backup database
-fly ssh console -a your-app-name
-# Inside the machine:
-cp /data/vibecamp.db /data/backups/backup_$(date +%Y%m%d_%H%M%S).db
-
-# Or download directly using flyctl
-fly ssh sftp shell -a your-app-name
-# Then use SFTP to download files
-```
-
-#### Common Volume Issues and Solutions
-
-##### Issue: Volume Not Attached
-```bash
-# Check if volume exists
-fly volumes list
-
-# Attach volume to machine
-fly machine update <machine-id> --volume your_app_data:/data
-```
-
-##### Issue: Permission Denied
-```python
-# Ensure directories are created with proper permissions
-from pathlib import Path
-
-data_dir = Path("/data")
-data_dir.mkdir(parents=True, exist_ok=True)
-data_dir.chmod(0o755)  # Read/write/execute for owner, read/execute for others
-```
-
-##### Issue: Database Not Persisting
-- Verify volume is mounted: `fly ssh console -a your-app-name -C "ls -la /data"`
-- Check database path matches volume mount point
-- Ensure database file is written to `/data/` not root directory
-
-#### Migration Guide: Adding Volume to Existing App
-
-1. **Create Volume**
-   ```bash
-   fly volumes create your_app_data --size 10 --region lax
-   ```
-
-2. **Update fly.toml**
-   ```toml
-   [[mounts]]
-     source = "your_app_data"
-     destination = "/data"
-   ```
-
-3. **Update Code to Use `/data/`**
-   ```python
-   # Update database path
-   DATABASE_URL = "sqlite+aiosqlite:///data/vibecamp.db"
-   ```
-
-4. **Migrate Existing Data**
-   ```bash
-   # SSH into machine
-   fly ssh console -a your-app-name
-   
-   # Copy existing database to volume
-   cp vibecamp.db /data/vibecamp.db
-   ```
-
-5. **Deploy**
-   ```bash
-   fly deploy
-   ```
-
-6. **Verify Persistence**
-   ```bash
-   # Restart machine and verify data persists
-   fly machine restart <machine-id>
-   fly ssh console -a your-app-name -C "ls -la /data"
-   ```
-
-#### Production Deployment Checklist
-- [ ] Volume created with appropriate size
-- [ ] Volume attached to machine(s)
+### Pre-Deployment Checklist
+- [ ] Volume created and attached
 - [ ] Database path configured to `/data/` directory
 - [ ] Log directory configured to `/data/logs/`
 - [ ] Upload directory configured to `/data/uploads/`
 - [ ] Backup strategy implemented
-- [ ] Volume persistence tested (restart machine, verify data persists)
-- [ ] Monitoring volume usage
-- [ ] Documented volume management procedures
+- [ ] Volume persistence tested
 
-This guide provides a complete foundation for building scalable, maintainable FastAPI applications following MVC architecture and industry best practices.
+---
 
 ## 🎨 Vibecamp Design System
 
-### Brand Identity & Visual Guidelines
+**Description**: Consistent branding and design system for Vibecamp POC applications.
 
-#### Core Branding
+### Brand Identity
 - **Brand Name**: "vibed coded" (lowercase, informal)
-- **Tagline**: "A Vibecamp Creation" (for footer attribution)
+- **Tagline**: "A Vibecamp Creation" (footer attribution)
 - **Logo**: Use `vc-logo.svg` from `/static/img/` directory
-- **Color Philosophy**: Pure black and white aesthetic for clean, professional look
+- **Color Philosophy**: Pure black and white aesthetic
 
-#### Color Palette
+### Color Palette
 ```css
-/* Primary Colors */
 --primary: #000000;        /* Pure black */
---secondary: #6B7280;      /* Gray-500 for subtle text */
---accent: #000000;         /* Black for accents */
---danger: #000000;         /* Black for errors */
-
-/* Background Colors */
+--secondary: #6B7280;      /* Gray-500 */
 --bg-primary: #ffffff;     /* Pure white */
---bg-secondary: #ffffff;   /* White backgrounds */
---bg-accent: #f9fafb;      /* Gray-50 for subtle sections */
-
-/* Text Colors */
 --text-primary: #000000;   /* Black text */
---text-secondary: #6B7280; /* Gray-500 for secondary text */
---text-muted: #9ca3af;     /* Gray-400 for muted text */
+--text-secondary: #6B7280;  /* Gray-500 */
 ```
 
-#### Typography System
-```css
-/* Font Families */
---font-hand: 'Kalam', cursive, system-ui;     /* Headings, brand elements */
---font-sans: 'Inter', system-ui, sans-serif;  /* Body text, UI elements */
+### Typography
+- **Headings**: 'Kalam', cursive (handwritten style)
+- **Body**: 'Inter', system-ui, sans-serif
+- **Font Import**: Google Fonts (Kalam, Inter)
 
-/* Font Weights */
---font-light: 300;
---font-normal: 400;
---font-medium: 500;
---font-semibold: 600;
---font-bold: 700;
-
-/* Responsive Typography Scale */
---text-xs: 0.75rem;      /* 12px */
---text-sm: 0.875rem;     /* 14px */
---text-base: 1rem;       /* 16px */
---text-lg: 1.125rem;     /* 18px */
---text-xl: 1.25rem;      /* 20px */
---text-2xl: 1.5rem;      /* 24px */
---text-3xl: 1.875rem;    /* 30px */
---text-4xl: 2.25rem;     /* 36px */
---text-5xl: 3rem;        /* 48px */
-```
-
-#### TailwindCSS Configuration
+### TailwindCSS Configuration
 ```javascript
 tailwind.config = {
   theme: {
     extend: {
       colors: {
         primary: '#000000',
-        secondary: '#6B7280',
-        accent: '#000000',
-        danger: '#000000'
+        secondary: '#6B7280'
       },
       fontFamily: {
         'sans': ['Inter', 'system-ui', 'sans-serif'],
@@ -1817,252 +769,68 @@ tailwind.config = {
 }
 ```
 
-#### Logo Integration
-```html
-<!-- Navigation Logo -->
-<h1 class="text-2xl font-hand font-bold text-black flex items-center">
-    <img src="/static/img/vc-logo.svg" alt="Logo" class="w-8 h-8 mr-2">
-    [App Name]
-</h1>
-
-<!-- Favicon -->
-<link rel="icon" type="image/svg+xml" href="/static/img/vc-logo.svg">
-```
-
-#### Component Design Patterns
-
-##### Navigation Bar
+### Component Patterns
+**Navigation Bar**:
 ```html
 <nav class="bg-white border-b-2 border-black">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex items-center">
-                <h1 class="text-2xl font-hand font-bold text-black flex items-center">
-                    <img src="/static/img/vc-logo.svg" alt="Logo" class="w-8 h-8 mr-2">
-                    [App Name]
-                </h1>
-            </div>
-            <div class="flex items-center space-x-4">
-                <a href="/" class="text-black hover:text-gray-600 px-3 py-2 rounded-md text-sm font-medium font-hand">
-                    Navigation Item
-                </a>
-            </div>
-        </div>
-    </div>
+    <h1 class="text-2xl font-hand font-bold text-black flex items-center">
+        <img src="/static/img/vc-logo.svg" alt="Logo" class="w-8 h-8 mr-2">
+        [App Name]
+    </h1>
 </nav>
 ```
 
-##### Hero Section
+**Form Elements**:
 ```html
-<div class="bg-white py-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center">
-            <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-hand font-bold text-black mb-4">
-                [Hero Title]
-            </h1>
-            <p class="text-base sm:text-lg md:text-xl text-gray-600 mb-6 sm:mb-8 font-sans">
-                [Hero Description]
-            </p>
-        </div>
-    </div>
-</div>
-```
-
-##### Form Elements
-```html
-<!-- Form Container -->
-<div class="bg-white border-2 border-black rounded-lg shadow-lg p-4 sm:p-6 mb-6 sm:mb-8">
-    <h2 class="text-xl sm:text-2xl font-hand font-bold text-black mb-4 sm:mb-6">
-        <i class="fas fa-icon mr-2 text-black"></i>
-        Form Title
-    </h2>
-    
-    <!-- Input Fields -->
-    <div>
-        <label for="field" class="block text-sm font-medium text-black mb-2 font-hand">
-            Field Label
-        </label>
-        <input 
-            type="text" 
-            id="field" 
-            name="field"
-            class="w-full px-4 py-3 pl-10 border-2 border-black rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-base sm:text-lg font-sans"
-            placeholder="Placeholder text..."
-        >
-    </div>
-    
-    <!-- Select Dropdowns -->
-    <div>
-        <label for="select" class="block text-sm font-medium text-black mb-2 font-hand">
-            Select Label
-        </label>
-        <select 
-            id="select" 
-            name="select"
-            class="w-full px-3 py-2 border-2 border-black rounded-md focus:ring-2 focus:ring-black focus:border-transparent font-sans"
-        >
-            <option value="">Select option...</option>
-        </select>
-    </div>
-    
-    <!-- Checkboxes -->
-    <label class="flex items-center">
-        <input 
-            type="checkbox" 
-            id="checkbox" 
-            name="checkbox"
-            class="rounded border-2 border-black text-black focus:ring-black"
-        >
-        <span class="ml-2 text-sm text-black font-hand">Checkbox label</span>
+<div class="bg-white border-2 border-black rounded-lg p-4 sm:p-6">
+    <label class="block text-sm font-medium text-black mb-2 font-hand">
+        Field Label
     </label>
-    
-    <!-- Buttons -->
-    <button 
-        type="submit"
-        class="w-full sm:w-auto bg-black text-white px-6 sm:px-8 py-3 rounded-lg hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2 transition-colors duration-200 font-hand font-bold text-base sm:text-lg"
+    <input 
+        type="text" 
+        class="w-full px-4 py-3 border-2 border-black rounded-lg focus:ring-2 focus:ring-black font-sans"
     >
-        <i class="fas fa-icon mr-2"></i>
-        Button Text
+    <button class="w-full bg-black text-white px-6 py-3 rounded-lg font-hand font-bold">
+        Submit
     </button>
 </div>
 ```
 
-##### Cards & Content
+**Cards**:
 ```html
-<!-- Content Cards -->
-<div class="bg-white border-2 border-black rounded-lg shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 space-y-2 sm:space-y-0">
-        <h3 class="text-lg sm:text-xl font-hand font-bold text-black">Card Title</h3>
-        <span class="px-3 py-1 bg-black text-white text-xs sm:text-sm rounded-full self-start sm:self-auto font-sans">
-            Badge
-        </span>
-    </div>
-    
-    <div class="space-y-3">
-        <div class="flex items-center text-black">
-            <i class="fas fa-icon mr-2 text-black"></i>
-            <span class="font-sans">Content text</span>
-        </div>
-    </div>
-    
-    <!-- Tags -->
-    <div class="mt-4">
-        <h4 class="text-sm font-medium text-black mb-2 font-hand">Tags:</h4>
-        <div class="flex flex-wrap gap-2">
-            <span class="px-2 py-1 bg-black text-white text-xs rounded-full font-sans">
-                Tag
-            </span>
-        </div>
-    </div>
+<div class="bg-white border-2 border-black rounded-lg shadow-md p-4 sm:p-6">
+    <h3 class="text-lg font-hand font-bold text-black">Card Title</h3>
+    <p class="text-gray-600 font-sans">Content text</p>
 </div>
 ```
 
-##### Pagination
+**Footer**:
 ```html
-<nav class="flex flex-wrap items-center justify-center gap-2 sm:gap-1">
-    <!-- Previous Button -->
-    <button 
-        class="px-3 py-2 text-sm font-medium text-black bg-white border-2 border-black rounded-md hover:bg-black hover:text-white min-w-[80px] font-hand">
-        Previous
-    </button>
-    
-    <!-- Page Numbers -->
-    <button 
-        class="px-3 py-2 text-sm font-medium text-white bg-black rounded-md min-w-[40px] font-hand">
-        1
-    </button>
-    <button 
-        class="px-3 py-2 text-sm font-medium text-black bg-white border-2 border-black hover:bg-black hover:text-white rounded-md min-w-[40px] font-hand">
-        2
-    </button>
-    
-    <!-- Next Button -->
-    <button 
-        class="px-3 py-2 text-sm font-medium text-black bg-white border-2 border-black rounded-md hover:bg-black hover:text-white min-w-[80px] font-hand">
-        Next
-    </button>
-</nav>
-```
-
-##### Footer
-```html
-<footer class="bg-white border-t-2 border-black py-8 mt-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center space-y-4">
-            <div class="text-sm text-gray-600 font-sans">
-                <p>Data sourced from <a href="[data-source-url]" target="_blank" class="text-black hover:underline font-medium">[Data Source]</a></p>
-                <p>Licensed under <a href="[license-url]" target="_blank" class="text-black hover:underline font-medium">[License]</a></p>
-            </div>
-            <div class="text-sm text-black font-hand">
-                <p>A <a href="https://vibecamp.au/" target="_blank" class="text-black hover:underline font-bold">Vibecamp</a> Creation</p>
-            </div>
-        </div>
+<footer class="bg-white border-t-2 border-black py-8">
+    <div class="text-center">
+        <p class="text-sm text-black font-hand">
+            A <a href="https://vibecamp.au/" class="font-bold">Vibecamp</a> Creation
+        </p>
     </div>
 </footer>
 ```
 
-#### State & Loading Elements
-```html
-<!-- Loading State -->
-<div class="text-center py-12">
-    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
-    <p class="mt-2 text-black font-hand">Loading...</p>
-</div>
-
-<!-- Empty State -->
-<div class="text-center py-12">
-    <i class="fas fa-icon text-4xl text-black mb-4"></i>
-    <h3 class="text-lg font-medium text-black mb-2 font-hand">No results found</h3>
-    <p class="text-black font-sans">Try adjusting your criteria</p>
-</div>
-```
-
-#### Mobile-First Responsive Patterns
-```html
-<!-- Responsive Typography -->
-<h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-hand font-bold text-black">
-    Responsive Heading
-</h1>
-
-<!-- Responsive Spacing -->
-<div class="p-4 sm:p-6 md:p-8 lg:p-12">
-    <!-- Content with responsive padding -->
-</div>
-
-<!-- Responsive Layouts -->
-<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
-    <!-- Stack vertically on mobile, horizontal on larger screens -->
-</div>
-
-<!-- Responsive Grid -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-    <!-- Responsive grid layout -->
-</div>
-```
-
-#### Required Font Imports
-```html
-<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-```
-
-#### Design Principles
-1. **Consistency**: Use the same color palette, typography, and spacing across all Vibecamp POC apps
-2. **Simplicity**: Clean black and white design with minimal distractions
+### Design Principles
+1. **Consistency**: Same color palette, typography, and spacing across all apps
+2. **Simplicity**: Clean black and white design
 3. **Accessibility**: High contrast ratios and readable fonts
-4. **Mobile-First**: Design for mobile devices first, then enhance for larger screens
-5. **Brand Recognition**: Always include the Vibecamp logo and "A Vibecamp Creation" attribution
-6. **Informal Tone**: Use handwritten-style fonts for headings to maintain approachable feel
+4. **Mobile-First**: Design for mobile first, then enhance
+5. **Brand Recognition**: Always include Vibecamp logo and attribution
+6. **Informal Tone**: Handwritten-style fonts for headings
 
-#### Implementation Checklist
+### Implementation Checklist
 - [ ] Add logo to `/static/img/vc-logo.svg`
 - [ ] Configure TailwindCSS with brand colors and fonts
-- [ ] Import required Google Fonts (Kalam, Inter)
+- [ ] Import Google Fonts (Kalam, Inter)
 - [ ] Apply consistent navigation structure
-- [ ] Use black borders (border-2 border-black) for all containers
-- [ ] Apply font-hand for headings and brand elements
-- [ ] Apply font-sans for body text and UI elements
-- [ ] Include proper footer attribution
+- [ ] Use black borders (`border-2 border-black`) for containers
+- [ ] Apply `font-hand` for headings
+- [ ] Apply `font-sans` for body text
+- [ ] Include footer attribution
 - [ ] Test mobile responsiveness
 - [ ] Ensure high contrast accessibility
-
-This design system ensures all Vibecamp POC applications maintain consistent branding, user experience, and visual identity while being easily implementable across different project types.
