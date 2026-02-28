@@ -49,6 +49,19 @@
                     required
                 >
             </div>
+
+            <!-- Due Date Input -->
+            <div>
+                <label for="todoDueDate" class="block text-sm font-medium text-black mb-2 font-hand">
+                    Due Date (optional)
+                </label>
+                <input
+                    type="date"
+                    id="todoDueDate"
+                    name="due_date"
+                    class="w-full px-4 py-3 border-2 border-black rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-base sm:text-lg font-sans bg-white"
+                >
+            </div>
             
             <!-- Submit Button -->
             <button 
@@ -63,6 +76,36 @@
     
     <!-- Todos List -->
     <div class="space-y-4">
+        <!-- Filter Bar -->
+        <div class="bg-white border-2 border-black rounded-lg shadow-lg p-4 sm:p-6">
+            <form method="GET" action="/api/todos/" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                <div>
+                    <label for="statusFilter" class="block text-sm font-medium text-black mb-2 font-hand">Status</label>
+                    <select id="statusFilter" name="status" class="w-full px-3 py-2 border-2 border-black rounded-lg bg-white font-sans">
+                        <option value="all" {% if selected_status == 'all' %}selected{% endif %}>All</option>
+                        <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="priorityFilter" class="block text-sm font-medium text-black mb-2 font-hand">Priority</label>
+                    <select id="priorityFilter" name="priority" class="w-full px-3 py-2 border-2 border-black rounded-lg bg-white font-sans">
+                        <option value="all" {% if selected_priority == 'all' %}selected{% endif %}>All</option>
+                        <option value="3" {% if selected_priority == '3' %}selected{% endif %}>High</option>
+                        <option value="2" {% if selected_priority == '2' %}selected{% endif %}>Medium</option>
+                        <option value="1" {% if selected_priority == '1' %}selected{% endif %}>Low</option>
+                    </select>
+                </div>
+                <button
+                    type="button"
+                    onclick="clearFilters()"
+                    class="w-full sm:w-auto bg-black text-white px-5 py-2 rounded-lg hover:bg-gray-800 transition-colors duration-200 font-hand font-bold"
+                >
+                    Clear Filters
+                </button>
+            </form>
+        </div>
+
         <h2 class="text-xl sm:text-2xl font-hand font-bold text-black mb-4">
             <i class="fas fa-tasks mr-2"></i>
             Your Todos
@@ -102,6 +145,24 @@
                             <h3 class="text-base sm:text-lg font-hand font-bold text-black {% if todo.completed %}line-through text-gray-500{% endif %}">
                                 {{ todo.title }}
                             </h3>
+                            <p class="mt-1">
+                                {% if todo.priority == 3 %}
+                                    <span class="inline-block text-xs font-bold px-2 py-1 rounded bg-red-100 text-red-800 border border-red-300">High Priority</span>
+                                {% elif todo.priority == 2 %}
+                                    <span class="inline-block text-xs font-bold px-2 py-1 rounded bg-blue-100 text-blue-800 border border-blue-300">Medium Priority</span>
+                                {% else %}
+                                    <span class="inline-block text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-800 border border-gray-300">Low Priority</span>
+                                {% endif %}
+                            </p>
+                            <p class="text-xs text-gray-700 mt-1 font-sans">
+                                {% if todo.due_date %}
+                                    <i class="fas fa-calendar-alt mr-1"></i>
+                                    Due: {{ todo.due_date }}
+                                {% else %}
+                                    <i class="fas fa-calendar-times mr-1"></i>
+                                    No due date
+                                {% endif %}
+                            </p>
                         </div>
                         
                         <!-- Edit mode: Show input field (hidden by default) -->
@@ -111,6 +172,12 @@
                                 id="todo-input-{{ todo.id }}"
                                 value="{{ todo.title }}"
                                 class="w-full px-3 py-2 border-2 border-black rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-base sm:text-lg font-sans"
+                            >
+                            <input
+                                type="date"
+                                id="todo-due-date-{{ todo.id }}"
+                                value="{% if todo.due_date %}{{ todo.due_date }}{% endif %}"
+                                class="mt-2 w-full px-3 py-2 border-2 border-black rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-base font-sans bg-white"
                             >
                         </div>
                         
@@ -191,7 +258,9 @@
         
         // Get the input value
         const titleInput = document.getElementById('todoTitle');
+        const dueDateInput = document.getElementById('todoDueDate');
         const title = titleInput.value.trim();
+        const dueDate = dueDateInput.value || null;
         
         if (!title) {
             alert('Please enter a todo title');
@@ -205,7 +274,7 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ title: title })
+                body: JSON.stringify({ title: title, due_date: dueDate })
             });
             
             if (!response.ok) {
@@ -214,6 +283,7 @@
             
             // Clear the input and reload the page to show the new todo
             titleInput.value = '';
+            dueDateInput.value = '';
             window.location.reload();
         } catch (error) {
             console.error('Error creating todo:', error);
@@ -259,7 +329,9 @@
         
         // Store the original title in a data attribute for cancel functionality
         const input = document.getElementById(`todo-input-${todoId}`);
+        const dueDateInput = document.getElementById(`todo-due-date-${todoId}`);
         input.setAttribute('data-original-title', currentTitle);
+        dueDateInput.setAttribute('data-original-due-date', dueDateInput.value);
         
         // Hide the display (title text)
         displayDiv.classList.add('hidden');
@@ -299,7 +371,9 @@
     async function saveEdit(todoId) {
         // Get the new title from the input field
         const input = document.getElementById(`todo-input-${todoId}`);
+        const dueDateInput = document.getElementById(`todo-due-date-${todoId}`);
         const newTitle = input.value.trim();
+        const newDueDate = dueDateInput.value || null;
         
         // Validate that the title is not empty
         if (!newTitle) {
@@ -314,7 +388,7 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ title: newTitle })
+                body: JSON.stringify({ title: newTitle, due_date: newDueDate })
             });
             
             if (!response.ok) {
@@ -336,10 +410,13 @@
     function cancelEdit(todoId) {
         // Get the original title from the data attribute we stored
         const input = document.getElementById(`todo-input-${todoId}`);
+        const dueDateInput = document.getElementById(`todo-due-date-${todoId}`);
         const originalTitle = input.getAttribute('data-original-title');
+        const originalDueDate = dueDateInput.getAttribute('data-original-due-date');
         
         // Reset the input to the original value
         input.value = originalTitle;
+        dueDateInput.value = originalDueDate;
         
         // Show the display, hide the edit input
         const displayDiv = document.getElementById(`todo-display-${todoId}`);
@@ -387,6 +464,8 @@
     window.addEventListener('DOMContentLoaded', () => {
         const todosContainer = document.getElementById('todosContainer');
         const emptyState = document.getElementById('emptyState');
+        const statusFilter = document.getElementById('statusFilter');
+        const priorityFilter = document.getElementById('priorityFilter');
         
         // Check if there are any todos
         const todoItems = todosContainer.querySelectorAll('.todo-item');
@@ -395,7 +474,21 @@
         } else {
             emptyState.classList.add('hidden');
         }
+
+        // Apply filters immediately when dropdown changes
+        statusFilter.addEventListener('change', () => statusFilter.form.submit());
+        priorityFilter.addEventListener('change', () => priorityFilter.form.submit());
     });
+
+    /**
+     * Clear all active filters and reload the full todo list.
+     */
+    function clearFilters() {
+        const statusFilter = document.getElementById('statusFilter');
+        const priorityFilter = document.getElementById('priorityFilter');
+        statusFilter.value = 'all';
+        priorityFilter.value = 'all';
+        statusFilter.form.submit();
+    }
 </script>
 {% endblock %}
-

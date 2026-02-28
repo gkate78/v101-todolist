@@ -11,6 +11,7 @@ Key concepts:
 - Optional: Indicates a field can be None (nullable in database terms)
 """
 
+from datetime import date
 from typing import Optional
 from sqlmodel import SQLModel, Field
 
@@ -39,8 +40,14 @@ class Todo(SQLModel, table=True):
     # Completion status - whether the todo is done or not
     # Default to False (not completed) when a new todo is created
     completed: bool = Field(default=False)
+
+    # Priority level for sorting and filtering todos
+    # 1 = Low, 2 = Medium, 3 = High
+    priority: int = Field(default=2)
+
+    # Optional due date for the task
+    due_date: Optional[date] = Field(default=None)
     
     # Optional: You can add more fields later, like:
     # created_at: Optional[datetime] = Field(default_factory=datetime.now)
     # priority: Optional[int] = Field(default=1)
-

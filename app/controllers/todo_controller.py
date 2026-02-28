@@ -16,6 +16,7 @@ CRUD Operations:
 - Delete: Remove a todo
 """
 
+from datetime import date
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -24,7 +25,33 @@ from fastapi import HTTPException
 from app.models.todo import Todo
 
 
-async def create_todo(db: AsyncSession, title: str) -> Todo:
+def calculate_priority_from_due_date(due_date: Optional[date]) -> int:
+    """
+    Calculate priority from due date.
+
+    Rules:
+    - Due today/tomorrow or overdue -> High (3)
+    - Due within a week -> Medium (2)
+    - Due later than a week -> Low (1)
+    - No due date -> Medium (2)
+    """
+    if due_date is None:
+        return 2
+
+    days_until_due = (due_date - date.today()).days
+    if days_until_due <= 1:
+        return 3
+    if days_until_due <= 7:
+        return 2
+    return 1
+
+
+async def create_todo(
+    db: AsyncSession,
+    title: str,
+    priority: Optional[int] = None,
+    due_date: Optional[date] = None
+) -> Todo:
     """
     Create a new todo item.
     
@@ -40,7 +67,15 @@ async def create_todo(db: AsyncSession, title: str) -> Todo:
     """
     # Create a new Todo object with the provided title
     # completed defaults to False (see the model definition)
-    new_todo = Todo(title=title, completed=False)
+    if priority is None:
+        priority = calculate_priority_from_due_date(due_date)
+
+    new_todo = Todo(
+        title=title,
+        completed=False,
+        priority=priority,
+        due_date=due_date
+    )
     
     # Add the todo to the database session
     # Think of this as "staging" the change
@@ -56,7 +91,11 @@ async def create_todo(db: AsyncSession, title: str) -> Todo:
     return new_todo
 
 
-async def get_all_todos(db: AsyncSession) -> List[Todo]:
+async def get_all_todos(
+    db: AsyncSession,
+    completed: Optional[bool] = None,
+    priority: Optional[int] = None
+) -> List[Todo]:
     """
     Retrieve all todos from the database.
     
@@ -74,6 +113,14 @@ async def get_all_todos(db: AsyncSession) -> List[Todo]:
     # Create a SQL SELECT query using SQLModel
     # select(Todo) is equivalent to "SELECT * FROM todo"
     statement = select(Todo)
+
+    if completed is not None:
+        statement = statement.where(Todo.completed == completed)
+    if priority is not None:
+        statement = statement.where(Todo.priority == priority)
+
+    # Show higher-priority tasks first, then by newest id
+    statement = statement.order_by(Todo.priority.desc(), Todo.id.desc())
     
     # Execute the query and get the results
     result = await db.execute(statement)
@@ -115,7 +162,16 @@ async def get_todo_by_id(db: AsyncSession, todo_id: int) -> Optional[Todo]:
     return todo
 
 
-async def update_todo(db: AsyncSession, todo_id: int, title: Optional[str] = None, completed: Optional[bool] = None) -> Todo:
+async def update_todo(
+    db: AsyncSession,
+    todo_id: int,
+    title: Optional[str] = None,
+    completed: Optional[bool] = None,
+    priority: Optional[int] = None,
+    due_date: Optional[date] = None,
+    priority_provided: bool = False,
+    due_date_provided: bool = False
+) -> Todo:
     """
     Update an existing todo item.
     
@@ -148,6 +204,12 @@ async def update_todo(db: AsyncSession, todo_id: int, title: Optional[str] = Non
         todo.title = title
     if completed is not None:
         todo.completed = completed
+    if priority_provided and priority is not None:
+        todo.priority = priority
+    if due_date_provided:
+        todo.due_date = due_date
+        if not priority_provided:
+            todo.priority = calculate_priority_from_due_date(todo.due_date)
     
     # Add the updated todo to the session (SQLAlchemy tracks changes automatically)
     db.add(todo)
@@ -192,4 +254,3 @@ async def delete_todo(db: AsyncSession, todo_id: int) -> bool:
     await db.commit()
     
     return True
-

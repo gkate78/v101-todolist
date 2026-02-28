@@ -72,3 +72,16 @@ async def init_db() -> None:
         # run_sync is needed because SQLModel metadata operations are synchronous
         await conn.run_sync(SQLModel.metadata.create_all)
 
+        # Lightweight SQLite migration:
+        # if the existing todo table was created before "priority" existed,
+        # add it with a default value so older databases keep working.
+        table_info = await conn.exec_driver_sql("PRAGMA table_info(todo)")
+        columns = [row[1] for row in table_info.fetchall()]
+        if "priority" not in columns:
+            await conn.exec_driver_sql(
+                "ALTER TABLE todo ADD COLUMN priority INTEGER NOT NULL DEFAULT 2"
+            )
+        if "due_date" not in columns:
+            await conn.exec_driver_sql(
+                "ALTER TABLE todo ADD COLUMN due_date DATE"
+            )

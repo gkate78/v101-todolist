@@ -18,12 +18,13 @@ Pydantic Schemas:
 - TodoResponse: Defines the structure of the response
 """
 
+from datetime import date
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.database import get_db
 from app.controllers.todo_controller import (
@@ -55,6 +56,8 @@ class TodoCreate(BaseModel):
     FastAPI automatically validates incoming JSON against this schema.
     """
     title: str  # Required field - must be a string
+    priority: int | None = Field(default=None, ge=1, le=3)
+    due_date: date | None = None
 
 
 class TodoUpdate(BaseModel):
@@ -66,6 +69,8 @@ class TodoUpdate(BaseModel):
     """
     title: str | None = None  # Optional - can be None
     completed: bool | None = None  # Optional - can be None
+    priority: int | None = Field(default=None, ge=1, le=3)
+    due_date: date | None = None
 
 
 class TodoResponse(BaseModel):
@@ -78,6 +83,8 @@ class TodoResponse(BaseModel):
     id: int
     title: str
     completed: bool
+    priority: int
+    due_date: date | None
     
     # Tell Pydantic to read from SQLModel objects
     model_config = {
@@ -120,7 +127,12 @@ async def create_todo_endpoint(
     ```
     """
     # Call the controller function to handle the business logic
-    todo = await create_todo(db, todo_data.title)
+    todo = await create_todo(
+        db,
+        todo_data.title,
+        priority=todo_data.priority,
+        due_date=todo_data.due_date
+    )
     
     # Convert SQLModel object to Pydantic response model
     return TodoResponse.model_validate(todo)
@@ -128,6 +140,8 @@ async def create_todo_endpoint(
 
 @router.get("/list", response_model=List[TodoResponse])
 async def get_all_todos_endpoint(
+    completed: bool | None = Query(default=None),
+    priority: int | None = Query(default=None, ge=1, le=3),
     db: AsyncSession = Depends(get_db)
 ) -> List[TodoResponse]:
     """
@@ -155,7 +169,7 @@ async def get_all_todos_endpoint(
     ```
     """
     # Get all todos from the controller
-    todos = await get_all_todos(db)
+    todos = await get_all_todos(db, completed=completed, priority=priority)
     
     # Convert each SQLModel object to Pydantic response model
     return [TodoResponse.model_validate(todo) for todo in todos]
@@ -232,11 +246,17 @@ async def update_todo_endpoint(
     ```
     """
     # Update the todo using the controller
+    update_data = todo_data.model_dump(exclude_unset=True)
+
     todo = await update_todo(
         db,
         todo_id,
-        title=todo_data.title,
-        completed=todo_data.completed
+        title=update_data.get("title"),
+        completed=update_data.get("completed"),
+        priority=update_data.get("priority"),
+        due_date=update_data.get("due_date"),
+        priority_provided="priority" in update_data,
+        due_date_provided="due_date" in update_data
     )
     
     # Return the updated todo
@@ -275,7 +295,12 @@ async def delete_todo_endpoint(
 # ============================================================================
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def todos_page(request: Request, db: AsyncSession = Depends(get_db)):
+async def todos_page(
+    request: Request,
+    status: str = Query(default="all", pattern="^(all|pending|completed)$"),
+    priority: str = Query(default="all", pattern="^(all|1|2|3)$"),
+    db: AsyncSession = Depends(get_db)
+):
     """
     Render the main todos page (HTML view).
     
@@ -288,14 +313,22 @@ async def todos_page(request: Request, db: AsyncSession = Depends(get_db)):
     **Response:** HTML page
     """
     # Get all todos from the database
-    todos = await get_all_todos(db)
+    completed_filter = None
+    if status == "pending":
+        completed_filter = False
+    elif status == "completed":
+        completed_filter = True
+
+    priority_filter = int(priority) if priority != "all" else None
+    todos = await get_all_todos(db, completed=completed_filter, priority=priority_filter)
     
     # Render the HTML template with the todos data
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,  # Required by Jinja2
-            "todos": todos  # Pass todos to the template
+            "todos": todos,  # Pass todos to the template
+            "selected_status": status,
+            "selected_priority": priority
         }
     )
-
