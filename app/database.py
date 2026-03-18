@@ -24,10 +24,9 @@ DATABASE_DIR = os.getenv("DATABASE_DIR", "./")
 DATABASE_FILE = os.path.join(DATABASE_DIR, "database.db")
 DATABASE_URL = f"sqlite+aiosqlite:///{DATABASE_FILE}"
 
-# Create the database engine
-# This is like opening a connection to the database
-# echo=True means SQLAlchemy will print all SQL queries (great for debugging!)
-engine = create_async_engine(DATABASE_URL, echo=True)
+SQL_ECHO = os.getenv("SQL_ECHO", "false").lower() == "true"
+
+engine = create_async_engine(DATABASE_URL, echo=SQL_ECHO)
 
 # Create a session factory
 # A session is like a conversation with the database
